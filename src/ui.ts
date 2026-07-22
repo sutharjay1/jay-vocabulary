@@ -25,7 +25,6 @@ export const rowName = "whitespace-nowrap font-medium text-foreground";
 export const rowMeta = "whitespace-nowrap text-sm text-muted-foreground";
 
 /* the definition-list variant, with uppercase labels and a right-aligned value */
-export const metaList = "group mt-9 border-t border-border";
 export const metaRow = `${row} border-b border-border`;
 export const metaName =
   "whitespace-nowrap text-[13px] font-semibold uppercase tracking-[0.06em] text-muted-foreground";

@@ -14,13 +14,23 @@ const q = "border-b border-border py-[26px] first:border-t";
 const qnum = "min-w-[18px] text-[13px] tabular-nums text-muted-foreground";
 const qprompt = "font-medium text-foreground text-pretty";
 
-/* The option is a button, so it must read as one. The letter sits in a bordered
-   box that fills solid when chosen — the same affordance a radio gives, without
-   adding a second control beside the letter the answer key refers to. */
-const opt =
-  "group/opt -mx-2.5 flex w-full items-center gap-3 rounded-lg px-2.5 py-2.5 text-left text-muted-foreground transition-colors duration-150 hover:bg-foreground/[0.035] hover:text-foreground active:bg-foreground/[0.06] aria-checked:text-foreground disabled:cursor-default disabled:hover:bg-transparent";
-const optKey =
-  "grid h-[22px] w-[22px] flex-none place-items-center rounded-md border border-border text-[11px] font-semibold leading-none text-muted-foreground transition-colors duration-150 group-hover/opt:border-border-strong group-aria-checked/opt:border-foreground group-aria-checked/opt:bg-foreground group-aria-checked/opt:text-background";
+/* Choosing an option settles it into the state hovering previews: the same
+   rounded tinted row, held. The letter box fills solid so the choice still
+   reads once the pointer moves away — hover alone can't carry that. */
+const opt = cn(
+  "group/opt -mx-2.5 flex w-full items-center gap-3 rounded-lg px-2.5 py-2.5 text-left",
+  "text-muted-foreground transition-colors duration-150",
+  "hover:bg-foreground/[0.035] hover:text-foreground active:bg-foreground/[0.06]",
+  "aria-checked:bg-foreground/[0.055] aria-checked:text-foreground",
+  "disabled:cursor-default disabled:hover:bg-transparent",
+  "disabled:aria-checked:bg-foreground/[0.055] disabled:aria-checked:text-foreground"
+);
+const optKey = cn(
+  "grid h-[22px] w-[22px] flex-none place-items-center rounded-md border border-border",
+  "text-[11px] font-semibold leading-none text-muted-foreground transition-colors duration-150",
+  "group-hover/opt:border-border-strong",
+  "group-aria-checked/opt:border-foreground group-aria-checked/opt:bg-foreground group-aria-checked/opt:text-background"
+);
 
 const verdict =
   "ml-7 text-[13px] text-muted-foreground text-pretty transition-[opacity,transform] duration-200 ease-out-quint [&_b]:font-semibold [&_b]:text-foreground motion-reduce:transform-none max-sm:ml-0";
