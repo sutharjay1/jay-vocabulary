@@ -1,9 +1,14 @@
 import { useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
+import { cn } from "@/lib/utils";
 import { getSet, scoredIn } from "../sets";
 import { block, controlLink, controls, ctaArrow, ctaLink, mono, note, section, title } from "../ui";
 
 const KEYS = ["A", "B", "C", "D"];
+
+/* The verdict fades down into place once answers are checked. */
+const verdictState = (checked: boolean) =>
+  checked ? "mt-2.5 translate-y-0 opacity-100" : "-translate-y-[3px] opacity-0";
 
 const q = "border-b border-border py-[26px] first:border-t";
 const qnum = "min-w-[18px] text-[13px] tabular-nums text-muted-foreground";
@@ -54,7 +59,7 @@ export default function Quiz() {
 
   return (
     <>
-      <h1 className={`mt-12 ${title}`}>Quiz</h1>
+      <h1 className={cn("mt-12", title)}>Quiz</h1>
 
       <div className={controls}>
         <Link className={controlLink} to={`/${set.slug}/words`}>
@@ -96,7 +101,7 @@ export default function Quiz() {
                 ))}
               </div>
               <div
-                className={`${verdict} ${checked ? "mt-2.5 translate-y-0 opacity-100" : "-translate-y-[3px] opacity-0"}`}
+                className={cn(verdict, verdictState(checked))}
                 role="status"
               >
                 {checked &&
@@ -128,7 +133,7 @@ export default function Quiz() {
                 <span className="font-medium text-pretty">
                   <span className="text-muted-foreground">{x.before}</span>
                   <select
-                    className={`slot ${val === "" ? "slot-empty" : ""} ${checked ? "slot-locked" : "hover:border-foreground"}`}
+                    className={cn("slot", val === "" && "slot-empty", checked ? "slot-locked" : "hover:border-foreground")}
                     disabled={checked}
                     value={val}
                     aria-label={`Answer for question ${x.n}`}
@@ -145,7 +150,7 @@ export default function Quiz() {
                 </span>
               </div>
               <div
-                className={`${verdict} ${checked ? "mt-2.5 translate-y-0 opacity-100" : "-translate-y-[3px] opacity-0"}`}
+                className={cn(verdict, verdictState(checked))}
                 role="status"
               >
                 {checked &&
@@ -166,7 +171,7 @@ export default function Quiz() {
       <div className={block}>
         <h2 className={section}>Part C · Matching</h2>
         <p className="mb-[26px] text-sm text-muted-foreground">Match each item to its meaning.</p>
-        <div className={`group ${q}`}>
+        <div className={cn("group", q)}>
           <div>
             {partC.map((x) => {
               const val = match[x.n] ?? "";
@@ -180,7 +185,7 @@ export default function Quiz() {
                   </span>
                   <span className="leader group-hover:opacity-100 max-sm:hidden" />
                   <select
-                    className={`slot-block ${val === "" ? "slot-empty" : ""} ${checked ? "slot-locked" : "hover:border-foreground"}`}
+                    className={cn("slot-block", val === "" && "slot-empty", checked ? "slot-locked" : "hover:border-foreground")}
                     disabled={checked}
                     value={val}
                     aria-label={`Meaning for ${x.item}`}
@@ -198,7 +203,7 @@ export default function Quiz() {
             })}
           </div>
           <div
-            className={`${verdict} ml-0 ${checked ? "mt-2.5 translate-y-0 opacity-100" : "-translate-y-[3px] opacity-0"}`}
+            className={cn(verdict, "ml-0", verdictState(checked))}
             role="status"
           >
             {checked &&
@@ -230,7 +235,10 @@ export default function Quiz() {
           {checked ? "Try again" : "Check answers"}
         </button>
         <span
-          className={`text-[15px] text-muted-foreground transition-[opacity,transform] duration-[220ms] ease-out-quint [&_b]:font-semibold [&_b]:tabular-nums [&_b]:text-foreground ${checked ? "translate-y-0 opacity-100" : "-translate-y-[3px] opacity-0"}`}
+          className={cn(
+            "text-[15px] text-muted-foreground transition-[opacity,transform] duration-[220ms] ease-out-quint [&_b]:font-semibold [&_b]:tabular-nums [&_b]:text-foreground",
+            checked ? "translate-y-0 opacity-100" : "-translate-y-[3px] opacity-0"
+          )}
           role="status"
         >
           {checked && (
