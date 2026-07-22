@@ -220,6 +220,53 @@ describe("rate limiting", () => {
   });
 });
 
+describe("DELETE /api/comments/:id", () => {
+  async function seed() {
+    const response = await post({
+      setSlug: "vocabulary-1",
+      wordSlug: "leverage",
+      author: "Jay",
+      body: "delete me",
+    });
+    return ((await response.json()) as any).comment.id as string;
+  }
+
+  it("rejects a request with no token", async () => {
+    const id = await seed();
+    const response = await call(`/api/comments/${id}`, { method: "DELETE" });
+    expect(response.status).toBe(401);
+  });
+
+  it("rejects a request with the wrong token", async () => {
+    const id = await seed();
+    const response = await call(`/api/comments/${id}`, {
+      method: "DELETE",
+      headers: { "x-admin-token": "nope" },
+    });
+    expect(response.status).toBe(401);
+  });
+
+  it("deletes with the right token", async () => {
+    const id = await seed();
+    const response = await call(`/api/comments/${id}`, {
+      method: "DELETE",
+      headers: { "x-admin-token": "test-admin-token" },
+    });
+    expect(response.status).toBe(200);
+
+    const { comments } = (await (await call("/api/comments")).json()) as any;
+    expect(comments).toHaveLength(0);
+  });
+
+  it("returns 404 for an id that does not exist", async () => {
+    const response = await call("/api/comments/does-not-exist", {
+      method: "DELETE",
+      headers: { "x-admin-token": "test-admin-token" },
+    });
+    expect(response.status).toBe(404);
+  });
+});
+
 describe("configuration", () => {
   it("refuses to store a comment when IP_SALT is missing", async () => {
     const original = env.IP_SALT;

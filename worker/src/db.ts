@@ -34,6 +34,11 @@ export async function insertComment(
   return row;
 }
 
+export async function deleteComment(db: D1Database, id: string): Promise<boolean> {
+  const result = await db.prepare(`DELETE FROM comments WHERE id = ?`).bind(id).run();
+  return (result.meta.changes ?? 0) > 0;
+}
+
 export async function listComments(
   db: D1Database,
   filter: { setSlug?: string; wordSlug?: string } = {}

@@ -1,4 +1,4 @@
-import { insertComment, listComments } from "./db";
+import { deleteComment, insertComment, listComments } from "./db";
 import { isRateLimited } from "./ratelimit";
 import { hashIp, validateComment } from "./validate";
 
@@ -51,6 +51,15 @@ export default {
 
       const comment = await insertComment(env.DB, { ...parsed.value, ipHash });
       return json({ comment }, 201);
+    }
+
+    const del = url.pathname.match(/^\/api\/comments\/([A-Za-z0-9-]+)$/);
+    if (del && request.method === "DELETE") {
+      if (request.headers.get("x-admin-token") !== env.ADMIN_TOKEN) {
+        return json({ error: "Unauthorized." }, 401);
+      }
+      const removed = await deleteComment(env.DB, del[1]);
+      return removed ? json({ ok: true }) : json({ error: "Not found." }, 404);
     }
 
     return new Response("Not found", { status: 404 });
