@@ -1271,8 +1271,10 @@ Expected: a row for `comments`.
 
 - [ ] **Step 7: Deploy**
 
+`deploy` is a reserved pnpm builtin, so `pnpm deploy` runs pnpm's own command and fails with `ERR_PNPM_CANNOT_DEPLOY`. It must be `pnpm run deploy`.
+
 ```bash
-cd worker && pnpm deploy
+cd worker && pnpm run deploy
 ```
 
 Expected output includes the deployed URL, e.g. `https://vocab-comments.<subdomain>.workers.dev`. **Record that URL — Task 7 needs it.**
@@ -2056,14 +2058,14 @@ curl -X DELETE https://vocab-comments.<subdomain>.workers.dev/api/comments/<id> 
 pnpm test            # vitest against real D1 via workers pool
 pnpm dev             # local worker
 pnpm db:init         # apply schema.sql to the remote database
-pnpm deploy          # publish
+pnpm run deploy          # publish
 ```
 ```
 
 - [ ] **Step 5: Deploy both halves**
 
 ```bash
-cd worker && pnpm deploy && cd ..
+cd worker && pnpm run deploy && cd ..
 DEP=$(vercel deploy --prod --yes 2>&1 | grep -oE 'jay-vocabulary-[a-z0-9]+-sutharjay\.vercel\.app' | head -1)
 vercel alias set "$DEP" jay-vocabulary.vercel.app
 ```
