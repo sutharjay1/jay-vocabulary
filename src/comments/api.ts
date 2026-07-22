@@ -1,6 +1,9 @@
 import type { Comment } from "./types";
 
-const BASE = (import.meta.env.VITE_COMMENTS_API ?? "").replace(/\/$/, "");
+/* Trim before testing for emptiness, or a value of " " counts as configured and
+   every request goes to a garbage base. Strip all trailing slashes, not one —
+   the Worker matches url.pathname exactly, so "//api/comments" 404s. */
+const BASE = (import.meta.env.VITE_COMMENTS_API ?? "").trim().replace(/\/+$/, "");
 
 /** With no API configured the UI hides the comment surfaces entirely rather
     than rendering a box that always fails. */
@@ -40,6 +43,12 @@ export async function postComment(input: {
   author: string;
   body: string;
 }): Promise<Comment> {
+  /* Without this, a disabled build POSTs to the relative "/api/comments", which
+     the static host does not serve — the caller would see "Request failed (404)"
+     instead of learning comments are simply not configured. */
+  if (!COMMENTS_ENABLED) {
+    throw new CommentError("Comments are not configured for this deployment.");
+  }
   const response = await fetch(`${BASE}/api/comments`, {
     method: "POST",
     headers: { "content-type": "application/json" },
