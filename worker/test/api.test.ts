@@ -351,3 +351,27 @@ describe("CORS", () => {
     expect(response.headers.get("access-control-allow-methods")).toContain("POST");
   });
 });
+
+describe("CORS on the reject path", () => {
+  it("sets Vary: Origin even when the origin is not allowed", async () => {
+    const response = await call("/api/comments", {
+      headers: { origin: "https://evil.example" },
+    });
+    expect(response.headers.get("access-control-allow-origin")).toBeNull();
+    expect(response.headers.get("vary")).toBe("Origin");
+  });
+
+  it("sets Vary: Origin when there is no origin at all", async () => {
+    const response = await call("/api/comments");
+    expect(response.headers.get("vary")).toBe("Origin");
+  });
+
+  it("keeps preflight bodyless", async () => {
+    const response = await call("/api/comments", {
+      method: "OPTIONS",
+      headers: { origin: "http://localhost:5173" },
+    });
+    expect(response.status).toBe(204);
+    expect(await response.text()).toBe("");
+  });
+});

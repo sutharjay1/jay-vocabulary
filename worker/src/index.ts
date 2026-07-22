@@ -20,7 +20,15 @@ export default {
       return withCors(new Response(null, { status: 204 }), cors);
     }
 
-    const response = await route(request, env);
+    /* An exception escaping route() would skip withCors, so the browser would
+       see an opaque CORS failure instead of the 500 — the one error you most
+       need to read. Catch it here so even a crash carries the headers. */
+    let response: Response;
+    try {
+      response = await route(request, env);
+    } catch {
+      response = json({ error: "Something went wrong." }, 500);
+    }
     return withCors(response, cors);
   },
 };
