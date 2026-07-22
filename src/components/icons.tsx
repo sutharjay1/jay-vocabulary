@@ -64,3 +64,10 @@ export const IconArrow = (p: P) => (
     <path d="M13 6.5 18.5 12 13 17.5" />
   </svg>
 );
+
+/* Speech bubble — the mark for the comment listings. */
+export const IconComment = (p: P) => (
+  <svg {...base} {...p}>
+    <path d="M20 14.5a2.5 2.5 0 0 1-2.5 2.5H9l-4 3.5V6.5A2.5 2.5 0 0 1 7.5 4h10A2.5 2.5 0 0 1 20 6.5z" />
+  </svg>
+);

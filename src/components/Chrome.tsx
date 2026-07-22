@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { SETS, getSet } from "../sets";
-import { IconDoc, IconLibrary, IconList, IconMenu, IconQuiz } from "./icons";
+import { IconComment, IconDoc, IconLibrary, IconList, IconMenu, IconQuiz } from "./icons";
 
 type Item = { href: string; label: string; mark: ReactNode; sep?: boolean };
 
@@ -19,11 +19,19 @@ function useItems(): Item[] {
 
   if (!set) {
     /* A numeral here would stutter against the label — "1 Vocabulary 1". */
-    return SETS.map((s) => ({
-      href: `/${s.slug}`,
-      label: s.title,
-      mark: <IconDoc className="block h-3.5 w-3.5" />,
-    }));
+    return [
+      ...SETS.map((s) => ({
+        href: `/${s.slug}`,
+        label: s.title,
+        mark: <IconDoc className="block h-3.5 w-3.5" />,
+      })),
+      {
+        href: "/comments",
+        label: "All comments",
+        mark: <IconComment className="block h-3.5 w-3.5" />,
+        sep: true,
+      },
+    ];
   }
 
   const items: Item[] = set.words.map((w) => ({
@@ -43,6 +51,11 @@ function useItems(): Item[] {
     mark: <IconQuiz className="block h-3.5 w-3.5" />,
   });
   items.push({
+    href: `/${set.slug}/comments`,
+    label: "Comments",
+    mark: <IconComment className="block h-3.5 w-3.5" />,
+  });
+  items.push({
     href: "/",
     label: "All sets",
     mark: <IconLibrary className="block h-3.5 w-3.5" />,
@@ -57,6 +70,7 @@ function useCurrent() {
   const set = useSet();
   const w = params.get("w");
   if (!set) return pathname === "/" ? "" : pathname;
+  if (pathname === `/${set.slug}/comments`) return `/${set.slug}/comments`;
   if (pathname === `/${set.slug}/quiz`) return `/${set.slug}/quiz`;
   if (pathname === `/${set.slug}/words`)
     return w ? `/${set.slug}/words?w=${w}` : `/${set.slug}/words`;
