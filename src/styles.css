@@ -83,37 +83,24 @@ h2.section{color:var(--foreground);font-size:13px;font-weight:600;letter-spacing
 .block{margin-top:56px}
 
 /* ===== library cards =====
-   Radius 16 with 20px padding and no nested rounded surfaces, so there is no
-   concentric radius to reconcile. The hairline in the card head is the same
-   fade-in leader used by every row on the site. */
-.cards{display:flex;flex-direction:column;gap:14px;margin-top:40px}
-.card{display:block;padding:20px 22px 18px;border:1px solid var(--border);border-radius:16px;
+   Three lines: name, source file, counts. No shadow — the 1px hairline is the
+   site's only surface language, and depth would break it. */
+.pagehead{margin-top:48px}
+.cards{display:flex;flex-direction:column;gap:10px;margin-top:34px}
+.card{display:block;padding:16px 18px;border:1px solid var(--border);border-radius:8px;
   background:var(--background);text-decoration:none;
-  transition:border-color 200ms ease,box-shadow 200ms ease,transform 150ms var(--ease-out)}
+  transition:border-color 200ms ease,transform 150ms var(--ease-out)}
 .card:hover{text-decoration:none}
 .card:active{transform:scale(.99)}
-@media(hover:hover) and (pointer:fine){
-  .card:hover{border-color:#d4d4d8;
-    box-shadow:0 1px 2px -1px rgba(9,9,11,.06),0 6px 16px -8px rgba(9,9,11,.14)}
-}
-.cardhead{display:flex;align-items:center;gap:10px}
-.cardn{font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;
-  color:var(--muted-foreground);white-space:nowrap;font-variant-numeric:tabular-nums}
-.cardline{height:1px;flex:1;min-width:12px;background:var(--border);opacity:0;transition:opacity .3s ease}
-.card:hover .cardline{opacity:1}
-.cardadded{font-size:13px;color:var(--muted-foreground);white-space:nowrap;font-variant-numeric:tabular-nums}
-.cardtitle{margin:12px 0 0;color:var(--foreground);font-size:21px;font-weight:600;
-  letter-spacing:-.01em;line-height:1.2}
-.cardfile{display:flex;align-items:center;gap:7px;margin:8px 0 0;color:var(--muted-foreground)}
-.cardfile .fileico{flex:none;width:15px;height:15px;display:block}
-.cardlede{margin:12px 0 0;font-size:15px;line-height:1.6;color:var(--muted-foreground);text-wrap:pretty}
-.cardfoot{display:flex;align-items:center;justify-content:space-between;gap:14px;
-  margin-top:16px;padding-top:14px;border-top:1px solid var(--border);flex-wrap:wrap}
-.cardstats{font-size:13px;color:var(--muted-foreground);font-variant-numeric:tabular-nums}
-.cardgo{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;
-  color:var(--foreground);white-space:nowrap}
-.cardgo .arw{width:15px;height:15px;display:block;transition:transform 200ms var(--ease-out)}
-.card:hover .cardgo .arw{transform:translateX(3px)}
+@media(hover:hover) and (pointer:fine){.card:hover{border-color:#d4d4d8}}
+.cardrow{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.cardtitle{color:var(--foreground);font-size:17px;font-weight:600;letter-spacing:-.005em;line-height:1.3}
+.cardrow .arw{flex:none;width:15px;height:15px;display:block;color:var(--muted-foreground);
+  transition:transform 200ms var(--ease-out),color 200ms ease}
+.card:hover .arw{transform:translateX(3px);color:var(--foreground)}
+.cardfile{display:block;margin-top:4px;color:var(--muted-foreground)}
+.cardstats{display:block;margin-top:12px;font-size:13px;color:var(--muted-foreground);
+  font-variant-numeric:tabular-nums}
 
 /* numeral in a word row — same slot width as the rail marks */
 .idx{flex:none;width:16px;font-size:12px;font-weight:600;color:var(--muted-foreground);
@@ -302,15 +289,14 @@ a.feat:hover{text-decoration:none}
   .tl-commit .ln{display:none}
   .mrow{flex-wrap:wrap;gap:2px 10px}
   .mrow .line{display:none}
-  .card{padding:18px 18px 16px;border-radius:14px}
-  .cardtitle{font-size:19px}
-  .cardfoot{gap:8px}
+  .card{padding:15px 16px}
+  .cardtitle{font-size:16px}
 }
 @media(prefers-reduced-motion:reduce){
   .pop,.pop.open{transform:none;transition:opacity 120ms ease}
   .calbtn{transition:color 150ms ease,background-color 150ms ease}
   .calbtn:active,.btn:active,.reveal:active,.opt:active,.card:active{transform:none}
-  .card:hover .cardgo .arw{transform:none}
+  .card:hover .arw{transform:none}
   .daygroup{animation:tlFade 300ms ease forwards;transform:none}
   @keyframes tlFade{to{opacity:1}}
   .cta a .arw{transition:none}
@@ -320,7 +306,7 @@ a.feat:hover{text-decoration:none}
 }
 @media print{
   body{padding:24px 0}
-  .row .line,.feat .ln,.tl-commit .ln,.mrow .line,.cardline{opacity:1}
+  .row .line,.feat .ln,.tl-commit .ln,.mrow .line{opacity:1}
   .card{break-inside:avoid}
   .calbtn,.rail,.actions{display:none}
   .daygroup{opacity:1;transform:none;animation:none}

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { SETS, getSet } from "../sets";
-import { IconLibrary, IconList, IconMenu, IconQuiz } from "./icons";
+import { IconDoc, IconLibrary, IconList, IconMenu, IconQuiz } from "./icons";
 
 type Item = { href: string; label: string; mark: ReactNode; sep?: boolean };
 
@@ -18,10 +18,11 @@ function useItems(): Item[] {
   const set = useSet();
 
   if (!set) {
+    /* A numeral here would stutter against the label — "1 Vocabulary 1". */
     return SETS.map((s) => ({
       href: `/${s.slug}`,
       label: s.title,
-      mark: <span className="num">{s.n}</span>,
+      mark: <IconDoc className="ico" />,
     }));
   }
 
