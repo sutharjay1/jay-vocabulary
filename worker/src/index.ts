@@ -26,7 +26,10 @@ export default {
     let response: Response;
     try {
       response = await route(request, env);
-    } catch {
+    } catch (err) {
+      // Logged so a D1 failure (or any other crash) is visible in
+      // `wrangler tail` instead of vanishing into a generic 500.
+      console.error(err);
       response = json({ error: "Something went wrong." }, 500);
     }
     return withCors(response, cors);
@@ -86,5 +89,5 @@ async function route(request: Request, env: Env): Promise<Response> {
     return removed ? json({ ok: true }) : json({ error: "Not found." }, 404);
   }
 
-  return new Response("Not found", { status: 404 });
+  return json({ error: "Not found." }, 404);
 }

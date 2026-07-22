@@ -6,7 +6,7 @@ export type NewComment = {
 };
 
 export const MAX_BODY = 1000;
-export const MAX_AUTHOR = 40;
+const MAX_AUTHOR = 40;
 
 const SLUG = /^[a-z0-9-]{1,64}$/;
 

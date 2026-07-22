@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
-import { COMMENTS_ENABLED, listComments, postComment } from "../comments/api";
+import { CommentError, COMMENTS_ENABLED, listComments, postComment } from "../comments/api";
 import type { Comment } from "../comments/types";
 import { section } from "../ui";
 import CommentList from "./CommentList";
@@ -45,13 +45,17 @@ export default function CommentThread({ set, word }: { set: string; word?: strin
       setBody("");
       localStorage.setItem(NAME_KEY, author);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not post that comment.");
+      setError(err instanceof CommentError ? err.message : "Could not post that comment.");
     } finally {
       setSending(false);
     }
   }
 
-  const over = body.length > MAX_BODY;
+  // The Worker validates body.trim(), so a trailing newline must not count
+  // against the limit here — otherwise the button can disable itself for text
+  // the Worker would accept.
+  const trimmedLength = body.trim().length;
+  const over = trimmedLength > MAX_BODY;
 
   return (
     <div className="mt-14">
@@ -90,8 +94,13 @@ export default function CommentThread({ set, word }: { set: string; word?: strin
             {sending ? "Posting…" : "Post comment"}
           </button>
 
-          <span className="text-[13px] tabular-nums text-muted-foreground" aria-live="polite">
-            {over ? `${body.length - MAX_BODY} over the limit` : `${MAX_BODY - body.length} left`}
+          <span
+            className="text-[13px] tabular-nums text-muted-foreground"
+            aria-live={over ? "polite" : "off"}
+          >
+            {over
+              ? `${trimmedLength - MAX_BODY} over the limit`
+              : `${MAX_BODY - trimmedLength} left`}
           </span>
         </div>
 
@@ -106,7 +115,10 @@ export default function CommentThread({ set, word }: { set: string; word?: strin
         {loading ? (
           <p className="py-4 text-[15px] text-muted-foreground">Loading comments…</p>
         ) : (
-          <CommentList comments={comments} />
+          // A word-scoped thread needs no label: every row here shares that
+          // word as its target. The set page has no word, so its rows span
+          // several words and each needs to say which one.
+          <CommentList comments={comments} showTarget={!word} />
         )}
       </div>
     </div>

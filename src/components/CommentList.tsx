@@ -1,11 +1,10 @@
-import { cn } from "@/lib/utils";
 import type { Comment } from "../comments/types";
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
 
-export function relativeTime(ms: number): string {
+function relativeTime(ms: number): string {
   const diff = Date.now() - ms;
   if (diff < MINUTE) return "just now";
   if (diff < HOUR) return `${Math.floor(diff / MINUTE)}m ago`;
@@ -39,7 +38,7 @@ export default function CommentList({
               {relativeTime(c.created_at)}
             </span>
             {showTarget && (
-              <span className={cn("text-[13px] text-muted-foreground")}>
+              <span className="text-[13px] text-muted-foreground">
                 {c.word_slug ? `${c.set_slug} · ${c.word_slug}` : c.set_slug}
               </span>
             )}

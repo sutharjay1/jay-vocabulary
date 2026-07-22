@@ -1191,10 +1191,20 @@ Expected: FAIL — no CORS headers are set, and OPTIONS returns 404.
 - [ ] **Step 3: Write `worker/src/cors.ts`**
 
 ```ts
+/** Statuses the Fetch spec forbids a body on. Constructing a Response that
+    pairs one with a non-null body throws at construction time. */
+const NULL_BODY_STATUS = new Set([204, 205, 304]);
+
 export function corsHeaders(request: Request, allowed: string): Record<string, string> {
   const origin = request.headers.get("origin");
   const list = allowed.split(",").map((s) => s.trim()).filter(Boolean);
-  if (!origin || !list.includes(origin)) return {};
+
+  /* Vary is unconditional: the response depends on Origin whether or not the
+     origin matched, so a shared cache must key on it either way. Omitting it on
+     the reject path lets a cache serve the header-less response to an allowed
+     origin, or the CORS-bearing one to a stranger. */
+  if (!origin || !list.includes(origin)) return { vary: "Origin" };
+
   return {
     "access-control-allow-origin": origin,
     "access-control-allow-methods": "GET,POST,DELETE,OPTIONS",
@@ -1207,7 +1217,8 @@ export function corsHeaders(request: Request, allowed: string): Record<string, s
 export function withCors(response: Response, headers: Record<string, string>): Response {
   const merged = new Headers(response.headers);
   for (const [k, v] of Object.entries(headers)) merged.set(k, v);
-  return new Response(response.body, {
+
+  return new Response(NULL_BODY_STATUS.has(response.status) ? null : response.body, {
     status: response.status,
     statusText: response.statusText,
     headers: merged,
@@ -1215,7 +1226,7 @@ export function withCors(response: Response, headers: Record<string, string>): R
 }
 ```
 
-The allowlist is explicit — a wildcard would let any site post on the reader's behalf.
+The allowlist is explicit — a wildcard would let any site post on the reader's behalf. `Vary: Origin` is set on every path, including the reject path, so a shared cache cannot serve the wrong response to the wrong origin. `withCors` nulls the body on statuses the Fetch spec forbids one on (204/205/304) — otherwise constructing the `Response` throws.
 
 - [ ] **Step 4: Wrap every response in `worker/src/index.ts`**
 
@@ -1225,7 +1236,7 @@ Add the import:
 import { corsHeaders, withCors } from "./cors";
 ```
 
-Restructure `fetch` so the routing lives in a helper and every exit goes through `withCors`:
+Restructure `fetch` so the routing lives in a helper and every exit goes through `withCors`, wrapped in a try/catch so a crash still carries CORS headers instead of surfacing to the browser as an opaque CORS failure:
 
 ```ts
 export default {
@@ -1236,7 +1247,18 @@ export default {
       return withCors(new Response(null, { status: 204 }), cors);
     }
 
-    const response = await route(request, env);
+    /* An exception escaping route() would skip withCors, so the browser would
+       see an opaque CORS failure instead of the 500 — the one error you most
+       need to read. Catch it here so even a crash carries the headers. */
+    let response: Response;
+    try {
+      response = await route(request, env);
+    } catch (err) {
+      // Logged so a D1 failure (or any other crash) is visible in
+      // `wrangler tail` instead of vanishing into a generic 500.
+      console.error(err);
+      response = json({ error: "Something went wrong." }, 500);
+    }
     return withCors(response, cors);
   },
 };
@@ -1252,7 +1274,7 @@ async function route(request: Request, env: Env): Promise<Response> {
 cd worker && pnpm test
 ```
 
-Expected: PASS, 24 tests.
+Expected: PASS, 29 tests.
 
 - [ ] **Step 6: Initialise the remote database**
 
@@ -1507,7 +1529,7 @@ export default function CommentList({
   showTarget?: boolean;
 }) {
   if (comments.length === 0) {
-    return <p className="py-4 text-[15px] text-muted-foreground">No notes yet.</p>;
+    return <p className="py-4 text-[15px] text-muted-foreground">No comments yet.</p>;
   }
 
   return (
@@ -1567,7 +1589,7 @@ export default function CommentThread({ set, word }: { set: string; word?: strin
     setLoading(true);
     listComments({ set, word: word ?? undefined })
       .then((c) => live && setComments(c))
-      .catch(() => live && setError("Could not load notes."))
+      .catch(() => live && setError("Could not load comments."))
       .finally(() => live && setLoading(false));
     return () => {
       live = false;
@@ -1587,7 +1609,7 @@ export default function CommentThread({ set, word }: { set: string; word?: strin
       setBody("");
       localStorage.setItem(NAME_KEY, author);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not post that note.");
+      setError(err instanceof Error ? err.message : "Could not post that comment.");
     } finally {
       setSending(false);
     }
@@ -1597,13 +1619,13 @@ export default function CommentThread({ set, word }: { set: string; word?: strin
 
   return (
     <div className="mt-14">
-      <h2 className={section}>Notes</h2>
+      <h2 className={section}>Comments</h2>
 
       <form className="mt-3" onSubmit={submit}>
         <textarea
           className="block min-h-[84px] w-full resize-y rounded-[10px] border border-border px-3.5 py-3 text-[15px] text-foreground transition-colors duration-150 placeholder:text-muted-foreground/70 focus:border-foreground focus:outline-none"
-          placeholder="Add a note — a thought, or something that confused you…"
-          aria-label="Your note"
+          placeholder="Add a comment — a thought, or something that confused you…"
+          aria-label="Your comment"
           value={body}
           maxLength={MAX_BODY + 200}
           onChange={(e) => setBody(e.target.value)}
@@ -1629,7 +1651,7 @@ export default function CommentThread({ set, word }: { set: string; word?: strin
             type="submit"
             disabled={sending || body.trim() === "" || over}
           >
-            {sending ? "Posting…" : "Post note"}
+            {sending ? "Posting…" : "Post comment"}
           </button>
 
           <span className="text-[13px] tabular-nums text-muted-foreground" aria-live="polite">
@@ -1646,7 +1668,7 @@ export default function CommentThread({ set, word }: { set: string; word?: strin
 
       <div className="mt-8">
         {loading ? (
-          <p className="py-4 text-[15px] text-muted-foreground">Loading notes…</p>
+          <p className="py-4 text-[15px] text-muted-foreground">Loading comments…</p>
         ) : (
           <CommentList comments={comments} />
         )}
@@ -1666,7 +1688,7 @@ In `src/routes/Words.tsx`, add the import:
 import CommentThread from "../components/CommentThread";
 ```
 
-Then, inside the single-word return, insert `<CommentThread set={set.slug} word={word.slug} />` between the Note block and the prev/next footer — that is, immediately after the `</div>` closing the Note block and before the `<div className="mt-12 flex items-center justify-between ...">` element.
+Then, inside the single-word return, insert `<CommentThread set={set.slug} word={word.slug} />` between the Note block (the word's own usage note — a separate, pre-existing feature) and the prev/next footer — that is, immediately after the `</div>` closing the Note block and before the `<div className="mt-12 flex items-center justify-between ...">` element.
 
 - [ ] **Step 4: Build and check by hand**
 
@@ -1674,17 +1696,18 @@ Then, inside the single-word return, insert `<CommentThread set={set.slug} word=
 pnpm build && pnpm preview --port 4317 --strictPort
 ```
 
-Open `http://localhost:4317/vocabulary-1/words?w=leverage`. Expected: a **Notes** heading below the note, a textarea, a name field pre-filled with `Jay`, a disabled **Post note** button, and the live note from Task 6 Step 8. Type a note and post it — it must appear at the top of the list without a page reload.
+Open `http://localhost:4317/vocabulary-1/words?w=leverage`. Expected: a **Comments** heading below the Note section, a textarea, a name field pre-filled with `Jay`, a disabled **Post comment** button, and the live comment from Task 6 Step 8. Type a comment and post it — it must appear at the top of the list without a page reload.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add src/components/CommentList.tsx src/components/CommentThread.tsx src/routes/Words.tsx
-git commit -m "Add a notes thread to the word page
+git commit -m "Add a comments thread to the word page
 
-The composer posts optimistically into local state so a note appears without
-a refetch. Comment bodies render with whitespace-pre-wrap through React's
-normal escaping, so typed markup is shown as text rather than parsed."
+The composer posts optimistically into local state so a comment appears
+without a refetch. Comment bodies render with whitespace-pre-wrap through
+React's normal escaping, so typed markup is shown as text rather than
+parsed."
 ```
 
 ---
@@ -1716,16 +1739,16 @@ Omitting `word` posts a set-level comment, which the Worker stores with `word_sl
 pnpm build && pnpm preview --port 4317 --strictPort
 ```
 
-Open `http://localhost:4317/vocabulary-1`. Expected: a **Notes** section at the bottom. Post a note. It must appear here but **not** on `/vocabulary-1/words?w=leverage`, because that page filters to `word=leverage`.
+Open `http://localhost:4317/vocabulary-1`. Expected: a **Comments** section at the bottom. Post a comment. It must appear here but **not** on `/vocabulary-1/words?w=leverage`, because that page filters to `word=leverage`.
 
 - [ ] **Step 3: Commit**
 
 ```bash
 git add src/routes/SetOverview.tsx
-git commit -m "Add a notes thread to the set page
+git commit -m "Add a comments thread to the set page
 
-Set-level notes are stored with a null word_slug, so they appear on the set
-page and in the set's comment listing but not under an individual word."
+Set-level comments are stored with a null word_slug, so they appear on the
+set page and in the set's comment listing but not under an individual word."
 ```
 
 ---
@@ -1747,7 +1770,7 @@ page and in the set's comment listing but not under an individual word."
 Append to `src/components/icons.tsx`:
 
 ```tsx
-export const IconNote = (p: P) => (
+export const IconComment = (p: P) => (
   <svg {...base} {...p}>
     <path d="M20 14.5a2.5 2.5 0 0 1-2.5 2.5H9l-4 3.5V6.5A2.5 2.5 0 0 1 7.5 4h10A2.5 2.5 0 0 1 20 6.5z" />
   </svg>
@@ -1779,7 +1802,7 @@ export default function Comments() {
     setLoading(true);
     listComments(slug ? { set: slug } : {})
       .then((c) => live && setComments(c))
-      .catch(() => live && setError("Could not load notes."))
+      .catch(() => live && setError("Could not load comments."))
       .finally(() => live && setLoading(false));
     return () => {
       live = false;
@@ -1790,7 +1813,7 @@ export default function Comments() {
 
   return (
     <>
-      <h1 className={cn("mt-12", title)}>{set ? `${set.title} notes` : "All notes"}</h1>
+      <h1 className={cn("mt-12", title)}>{set ? `${set.title} comments` : "All comments"}</h1>
 
       <div className={controls}>
         {set ? (
@@ -1800,7 +1823,7 @@ export default function Comments() {
             </Link>
             <span className="text-border">·</span>
             <Link className={controlLink} to="/comments">
-              All notes
+              All comments
             </Link>
           </>
         ) : (
@@ -1812,10 +1835,10 @@ export default function Comments() {
 
       {!COMMENTS_ENABLED ? (
         <p className="text-[15px] text-muted-foreground">
-          Notes are not configured for this deployment.
+          Comments are not configured for this deployment.
         </p>
       ) : loading ? (
-        <p className="py-4 text-[15px] text-muted-foreground">Loading notes…</p>
+        <p className="py-4 text-[15px] text-muted-foreground">Loading comments…</p>
       ) : error ? (
         <p className="py-4 text-[15px] text-foreground" role="alert">
           {error}
@@ -1828,7 +1851,7 @@ export default function Comments() {
 }
 ```
 
-`showTarget` is on here because a listing spans several words, so each note has to say what it is about.
+`showTarget` is on here because a listing spans several words, so each comment has to say what it is about.
 
 - [ ] **Step 3: Register both routes in `src/App.tsx`**
 
@@ -1854,12 +1877,12 @@ In the `Head` component, replace the title expression with:
 ```tsx
     document.title = !set
       ? leaf === undefined && pathname === "/comments"
-        ? "All notes"
+        ? "All comments"
         : "Vocabulary — every set"
       : leaf === "quiz"
         ? `Quiz · ${set.title}`
         : leaf === "comments"
-          ? `Notes · ${set.title}`
+          ? `Comments · ${set.title}`
           : leaf === "words"
             ? `The words · ${set.title}`
             : `${set.title} — ${set.theme}`;
@@ -1869,7 +1892,7 @@ Note `/comments` has `slug === "comments"`, which `getSet` does not resolve, so 
 
 - [ ] **Step 5: Add rail and popover entries in `src/components/Chrome.tsx`**
 
-Add `IconNote` to the icons import. In `useItems`, in the **no-set** branch, append after the `SETS.map(...)` result:
+Add `IconComment` to the icons import. In `useItems`, in the **no-set** branch, append after the `SETS.map(...)` result:
 
 ```tsx
     return [
@@ -1880,8 +1903,8 @@ Add `IconNote` to the icons import. In `useItems`, in the **no-set** branch, app
       })),
       {
         href: "/comments",
-        label: "All notes",
-        mark: <IconNote className="block h-3.5 w-3.5" />,
+        label: "All comments",
+        mark: <IconComment className="block h-3.5 w-3.5" />,
         sep: true,
       },
     ];
@@ -1892,8 +1915,8 @@ In the **set** branch, insert this entry immediately after the `Quiz` entry and 
 ```tsx
   items.push({
     href: `/${set.slug}/comments`,
-    label: "Notes",
-    mark: <IconNote className="block h-3.5 w-3.5" />,
+    label: "Comments",
+    mark: <IconComment className="block h-3.5 w-3.5" />,
   });
 ```
 
@@ -1911,7 +1934,7 @@ and change the no-set early return to:
   if (!set) return pathname === "/" ? "" : pathname;
 ```
 
-which already returns `/comments` unchanged for the all-notes route.
+which already returns `/comments` unchanged for the all-comments route.
 
 - [ ] **Step 7: Build and check by hand**
 
@@ -1920,10 +1943,10 @@ pnpm build && pnpm preview --port 4317 --strictPort
 ```
 
 Check all of:
-- `http://localhost:4317/comments` — every note, each labelled with its set and word
-- `http://localhost:4317/vocabulary-1/comments` — only that set's notes
+- `http://localhost:4317/comments` — every comment, each labelled with its set and word
+- `http://localhost:4317/vocabulary-1/comments` — only that set's comments
 - `http://localhost:4317/vocabulary-99/comments` — redirects to `/`
-- The rail shows **Notes** inside a set and **All notes** on `/`
+- The rail shows **Comments** inside a set and **All comments** on `/`
 
 - [ ] **Step 8: Commit**
 
@@ -1932,8 +1955,8 @@ git add src/routes/Comments.tsx src/App.tsx src/components/Chrome.tsx src/compon
 git commit -m "Add /comments and /:set/comments listings
 
 One component serves both routes and switches scope on the presence of the
-set param. Listings pass showTarget so each note says which word it belongs
-to, which a single word's thread does not need."
+set param. Listings pass showTarget so each comment says which word it
+belongs to, which a single word's thread does not need."
 ```
 
 ---
@@ -1980,19 +2003,19 @@ const check = (label, got, want) => {
 const stamp = `e2e ${Date.now()}`;
 
 await p.goto(`${BASE}/vocabulary-1/words?w=leverage`, { waitUntil: "networkidle" });
-check("thread renders", await p.getByRole("heading", { name: "Notes" }).isVisible(), true);
+check("thread renders", await p.getByRole("heading", { name: "Comments" }).isVisible(), true);
 check("name defaults to Jay", await p.getByLabel("Your name").inputValue(), "Jay");
-check("post disabled while empty", await p.getByRole("button", { name: "Post note" }).isDisabled(), true);
+check("post disabled while empty", await p.getByRole("button", { name: "Post comment" }).isDisabled(), true);
 
-await p.getByLabel("Your note").fill(stamp);
-check("post enabled with text", await p.getByRole("button", { name: "Post note" }).isDisabled(), false);
-await p.getByRole("button", { name: "Post note" }).click();
+await p.getByLabel("Your comment").fill(stamp);
+check("post enabled with text", await p.getByRole("button", { name: "Post comment" }).isDisabled(), false);
+await p.getByRole("button", { name: "Post comment" }).click();
 await p.waitForTimeout(1200);
-check("note appears without reload", (await p.locator("article").first().innerText()).includes(stamp), true);
+check("comment appears without reload", (await p.locator("article").first().innerText()).includes(stamp), true);
 
 await p.reload({ waitUntil: "networkidle" });
 await p.waitForTimeout(800);
-check("note survives a reload", (await p.locator("main").innerText()).includes(stamp), true);
+check("comment survives a reload", (await p.locator("main").innerText()).includes(stamp), true);
 
 await p.goto(`${BASE}/vocabulary-1/comments`, { waitUntil: "networkidle" });
 await p.waitForTimeout(800);
@@ -2000,7 +2023,7 @@ check("shows in the set listing", (await p.locator("main").innerText()).includes
 
 await p.goto(`${BASE}/comments`, { waitUntil: "networkidle" });
 await p.waitForTimeout(800);
-check("shows in the all-notes listing", (await p.locator("main").innerText()).includes(stamp), true);
+check("shows in the all-comments listing", (await p.locator("main").innerText()).includes(stamp), true);
 check("listing labels the target", (await p.locator("main").innerText()).includes("leverage"), true);
 
 await p.goto(`${BASE}/vocabulary-1/quiz`, { waitUntil: "networkidle" });
@@ -2026,15 +2049,15 @@ Expected: all assertions pass, no page errors.
 ```markdown
 # vocab-comments
 
-Cloudflare Worker backing the public notes on jay-vocabulary.vercel.app.
+Cloudflare Worker backing the public comments on jay-vocabulary.vercel.app.
 Stores comments in D1 (`vocab_comments`).
 
 ## Endpoints
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/api/comments` | All notes, newest first, max 200 |
-| GET | `/api/comments?set=vocabulary-1` | One set, including its set-level notes |
+| GET | `/api/comments` | All comments, newest first, max 200 |
+| GET | `/api/comments?set=vocabulary-1` | One set, including its set-level comments |
 | GET | `/api/comments?set=vocabulary-1&word=leverage` | One word |
 | POST | `/api/comments` | `{ setSlug, wordSlug?, author?, body }` |
 | DELETE | `/api/comments/:id` | Requires `x-admin-token` |
@@ -2089,9 +2112,9 @@ done
 
 Expected: all assertions pass, and every route returns `200`.
 
-- [ ] **Step 7: Delete the end-to-end test notes**
+- [ ] **Step 7: Delete the end-to-end test comments**
 
-The e2e run leaves `e2e <timestamp>` notes in the live database. Remove them:
+The e2e run leaves `e2e <timestamp>` comments in the live database. Remove them:
 
 ```bash
 cd worker && pnpm dlx wrangler d1 execute vocab_comments --remote \

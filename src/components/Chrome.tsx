@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
+import { COMMENTS_ENABLED } from "../comments/api";
 import { SETS, getSet } from "../sets";
 import { IconComment, IconDoc, IconLibrary, IconList, IconMenu, IconQuiz } from "./icons";
 
@@ -25,12 +26,19 @@ function useItems(): Item[] {
         label: s.title,
         mark: <IconDoc className="block h-3.5 w-3.5" />,
       })),
-      {
-        href: "/comments",
-        label: "All comments",
-        mark: <IconComment className="block h-3.5 w-3.5" />,
-        sep: true,
-      },
+      // With no API configured the comments routes still resolve (a
+      // directly-typed /comments URL explains itself) but there is nothing
+      // to browse there, so the nav does not point at it.
+      ...(COMMENTS_ENABLED
+        ? [
+            {
+              href: "/comments",
+              label: "All comments",
+              mark: <IconComment className="block h-3.5 w-3.5" />,
+              sep: true,
+            },
+          ]
+        : []),
     ];
   }
 
@@ -50,11 +58,13 @@ function useItems(): Item[] {
     label: "Quiz",
     mark: <IconQuiz className="block h-3.5 w-3.5" />,
   });
-  items.push({
-    href: `/${set.slug}/comments`,
-    label: "Comments",
-    mark: <IconComment className="block h-3.5 w-3.5" />,
-  });
+  if (COMMENTS_ENABLED) {
+    items.push({
+      href: `/${set.slug}/comments`,
+      label: "Comments",
+      mark: <IconComment className="block h-3.5 w-3.5" />,
+    });
+  }
   items.push({
     href: "/",
     label: "All sets",

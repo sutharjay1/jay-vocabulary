@@ -9,7 +9,8 @@ export default defineWorkersConfig({
           bindings: {
             ADMIN_TOKEN: "test-admin-token",
             IP_SALT: "test-salt",
-            ALLOWED_ORIGINS: "https://jay-vocabulary.vercel.app,http://localhost:5173",
+            ALLOWED_ORIGINS:
+              "https://jay-vocabulary.vercel.app,http://localhost:5173,http://localhost:4317",
           },
         },
       },
