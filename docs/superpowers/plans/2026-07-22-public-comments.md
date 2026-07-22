@@ -231,6 +231,20 @@ export default defineWorkersConfig({
 });
 ```
 
+- [ ] **Step 6d: Type `env` for `cloudflare:test`**
+
+`worker/test/env.d.ts`:
+
+```ts
+import type { Env } from "../src/index";
+
+declare module "cloudflare:test" {
+  interface ProvidedEnv extends Env {}
+}
+```
+
+`cloudflare:test` needs this `ProvidedEnv` augmentation so `env.DB` is typed instead of erroring with "Property 'DB' does not exist on type 'ProvidedEnv'".
+
 - [ ] **Step 7: Write the failing test**
 
 `worker/test/api.test.ts`:
@@ -286,7 +300,7 @@ export interface Env {
 }
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
     if (url.pathname === "/api/comments" && request.method === "GET") {
@@ -315,10 +329,10 @@ Expected: PASS, 1 test.
 - [ ] **Step 10a: Check the types resolve**
 
 ```bash
-cd worker && pnpm dlx tsc --noEmit -p tsconfig.json
+cd worker && pnpm typecheck
 ```
 
-Expected: no output. If `D1Database` is reported as missing, `@cloudflare/workers-types` is not in `types` — re-check Step 6a.
+Expected: no output. A failure here usually means the `types` array in `worker/tsconfig.json` is wrong.
 
 - [ ] **Step 11: Ignore Worker build output**
 
@@ -1083,7 +1097,7 @@ Restructure `fetch` so the routing lives in a helper and every exit goes through
 
 ```ts
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
     const cors = corsHeaders(request, env.ALLOWED_ORIGINS);
 
     if (request.method === "OPTIONS") {
