@@ -25,7 +25,7 @@ export default function CommentThread({ set, word }: { set: string; word?: strin
     setLoading(true);
     listComments({ set, word: word ?? undefined })
       .then((c) => live && setComments(c))
-      .catch(() => live && setError("Could not load notes."))
+      .catch(() => live && setError("Could not load comments."))
       .finally(() => live && setLoading(false));
     return () => {
       live = false;
@@ -45,7 +45,7 @@ export default function CommentThread({ set, word }: { set: string; word?: strin
       setBody("");
       localStorage.setItem(NAME_KEY, author);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not post that note.");
+      setError(err instanceof Error ? err.message : "Could not post that comment.");
     } finally {
       setSending(false);
     }
@@ -55,13 +55,13 @@ export default function CommentThread({ set, word }: { set: string; word?: strin
 
   return (
     <div className="mt-14">
-      <h2 className={section}>Notes</h2>
+      <h2 className={section}>Comments</h2>
 
       <form className="mt-3" onSubmit={submit}>
         <textarea
           className="block min-h-[84px] w-full resize-y rounded-[10px] border border-border px-3.5 py-3 text-[15px] text-foreground transition-colors duration-150 placeholder:text-muted-foreground/70 focus:border-foreground focus:outline-none"
-          placeholder="Add a note — a thought, or something that confused you…"
-          aria-label="Your note"
+          placeholder="Add a comment — a thought, or something that confused you…"
+          aria-label="Your comment"
           value={body}
           maxLength={MAX_BODY + 200}
           onChange={(e) => setBody(e.target.value)}
@@ -87,7 +87,7 @@ export default function CommentThread({ set, word }: { set: string; word?: strin
             type="submit"
             disabled={sending || body.trim() === "" || over}
           >
-            {sending ? "Posting…" : "Post note"}
+            {sending ? "Posting…" : "Post comment"}
           </button>
 
           <span className="text-[13px] tabular-nums text-muted-foreground" aria-live="polite">
@@ -104,7 +104,7 @@ export default function CommentThread({ set, word }: { set: string; word?: strin
 
       <div className="mt-8">
         {loading ? (
-          <p className="py-4 text-[15px] text-muted-foreground">Loading notes…</p>
+          <p className="py-4 text-[15px] text-muted-foreground">Loading comments…</p>
         ) : (
           <CommentList comments={comments} />
         )}

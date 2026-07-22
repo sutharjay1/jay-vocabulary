@@ -1,6 +1,7 @@
 import { Link, Navigate, useParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { getSet, examplesIn, synonymsIn, questionsIn, scoredIn } from "../sets";
+import CommentThread from "../components/CommentThread";
 import Prose from "../components/Prose";
 import {
   block,
@@ -133,6 +134,10 @@ export default function SetOverview() {
           Take the quiz — {scoredIn(set)} scored answers <span className={ctaArrow}>→</span>
         </Link>
       </p>
+
+      {/* No word prop: a set-level comment is stored with a null word_slug, so it
+          shows here and in the set's listing but under no individual word. */}
+      <CommentThread set={set.slug} />
     </>
   );
 }

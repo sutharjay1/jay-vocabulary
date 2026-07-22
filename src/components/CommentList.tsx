@@ -26,7 +26,7 @@ export default function CommentList({
   showTarget?: boolean;
 }) {
   if (comments.length === 0) {
-    return <p className="py-4 text-[15px] text-muted-foreground">No notes yet.</p>;
+    return <p className="py-4 text-[15px] text-muted-foreground">No comments yet.</p>;
   }
 
   return (
