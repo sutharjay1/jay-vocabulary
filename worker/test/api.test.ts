@@ -321,3 +321,33 @@ describe("configuration", () => {
     }
   });
 });
+
+describe("CORS", () => {
+  it("echoes an allowed origin", async () => {
+    const response = await call("/api/comments", {
+      headers: { origin: "https://jay-vocabulary.vercel.app" },
+    });
+    expect(response.headers.get("access-control-allow-origin")).toBe(
+      "https://jay-vocabulary.vercel.app"
+    );
+  });
+
+  it("does not echo an origin that is not allowed", async () => {
+    const response = await call("/api/comments", {
+      headers: { origin: "https://evil.example" },
+    });
+    expect(response.headers.get("access-control-allow-origin")).toBeNull();
+  });
+
+  it("answers preflight", async () => {
+    const response = await call("/api/comments", {
+      method: "OPTIONS",
+      headers: {
+        origin: "http://localhost:5173",
+        "access-control-request-method": "POST",
+      },
+    });
+    expect(response.status).toBe(204);
+    expect(response.headers.get("access-control-allow-methods")).toContain("POST");
+  });
+});
