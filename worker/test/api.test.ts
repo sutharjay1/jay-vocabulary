@@ -1,6 +1,7 @@
 import { env, createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
 import { beforeEach, describe, expect, it } from "vitest";
 import worker from "../src/index";
+import { originAllowed } from "../src/cors";
 import schema from "../schema.sql?raw";
 
 async function call(path: string, init?: RequestInit) {
@@ -373,5 +374,56 @@ describe("CORS on the reject path", () => {
     });
     expect(response.status).toBe(204);
     expect(await response.text()).toBe("");
+  });
+});
+
+describe("origin matching", () => {
+  const ALLOW =
+    "https://jay-vocabulary.vercel.app,https://*-sutharjay.vercel.app,http://localhost:*";
+
+  const allows = (origin: string) => originAllowed(origin, ALLOW);
+
+  it("accepts the canonical production origin", () => {
+    expect(allows("https://jay-vocabulary.vercel.app")).toBe(true);
+  });
+
+  it("accepts a per-deployment Vercel URL", () => {
+    expect(allows("https://jay-vocabulary-ag3yla3p3-sutharjay.vercel.app")).toBe(true);
+  });
+
+  it("accepts any local port", () => {
+    expect(allows("http://localhost:4173")).toBe(true);
+    expect(allows("http://localhost:5173")).toBe(true);
+    expect(allows("http://localhost:4317")).toBe(true);
+  });
+
+  it("refuses a wildcard that would cross a dot", () => {
+    // `*` must be one label. Otherwise a.b-sutharjay.vercel.app would pass.
+    expect(allows("https://a.b-sutharjay.vercel.app")).toBe(false);
+  });
+
+  it("refuses a suffix-extension attack", () => {
+    expect(allows("https://evil-sutharjay.vercel.app.attacker.com")).toBe(false);
+  });
+
+  it("refuses a prefix-extension attack", () => {
+    expect(allows("https://attacker.com/https://jay-vocabulary.vercel.app")).toBe(false);
+  });
+
+  it("refuses a lookalike host", () => {
+    expect(allows("https://localhost.evil.com")).toBe(false);
+    expect(allows("http://localhost.evil.com:4173")).toBe(false);
+  });
+
+  it("refuses the wrong scheme", () => {
+    expect(allows("http://jay-vocabulary.vercel.app")).toBe(false);
+  });
+
+  it("refuses a bare unrelated origin", () => {
+    expect(allows("https://evil.example")).toBe(false);
+  });
+
+  it("refuses an empty origin", () => {
+    expect(allows("")).toBe(false);
   });
 });

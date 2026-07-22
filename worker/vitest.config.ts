@@ -9,8 +9,10 @@ export default defineWorkersConfig({
           bindings: {
             ADMIN_TOKEN: "test-admin-token",
             IP_SALT: "test-salt",
+            // Must stay identical to wrangler.toml's [vars] so the suite
+            // exercises the same allowlist production does.
             ALLOWED_ORIGINS:
-              "https://jay-vocabulary.vercel.app,http://localhost:5173,http://localhost:4317",
+              "https://jay-vocabulary.vercel.app,https://*-sutharjay.vercel.app,http://localhost:*",
           },
         },
       },
