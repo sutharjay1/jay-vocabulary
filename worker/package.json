@@ -1,0 +1,18 @@
+{
+  "name": "vocab-comments",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "vitest run",
+    "db:init": "wrangler d1 execute vocab_comments --remote --file=./schema.sql",
+    "db:init:local": "wrangler d1 execute vocab_comments --local --file=./schema.sql"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.6.4",
+    "@cloudflare/workers-types": "^4.20250109.0",
+    "vitest": "~2.1.9",
+    "wrangler": "^4.113.0"
+  }
+}

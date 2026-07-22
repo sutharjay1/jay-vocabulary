@@ -4,3 +4,6 @@ dist
 .DS_Store
 *.local
 tsconfig.tsbuildinfo
+.superpowers
+worker/node_modules
+worker/.wrangler

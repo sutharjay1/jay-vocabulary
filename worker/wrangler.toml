@@ -1,0 +1,12 @@
+name = "vocab-comments"
+main = "src/index.ts"
+compatibility_date = "2026-07-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "vocab_comments"
+database_id = "30706758-bdae-4e1c-90f7-c90dd7a0e13a"
+
+[vars]
+ALLOWED_ORIGINS = "https://jay-vocabulary.vercel.app,http://localhost:5173,http://localhost:4317"
