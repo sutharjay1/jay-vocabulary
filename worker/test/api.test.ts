@@ -180,6 +180,46 @@ describe("filtering", () => {
   });
 });
 
+describe("rate limiting", () => {
+  it("allows five posts then rejects the sixth", async () => {
+    for (let i = 0; i < 5; i++) {
+      const ok = await post({
+        setSlug: "vocabulary-1",
+        wordSlug: null,
+        author: "Jay",
+        body: `note ${i}`,
+      });
+      expect(ok.status).toBe(201);
+    }
+    const blocked = await post({
+      setSlug: "vocabulary-1",
+      wordSlug: null,
+      author: "Jay",
+      body: "one too many",
+    });
+    expect(blocked.status).toBe(429);
+    expect(((await blocked.json()) as any).error).toMatch(/too many/i);
+  });
+
+  it("does not count comments older than the window", async () => {
+    for (let i = 0; i < 5; i++) {
+      await post({ setSlug: "vocabulary-1", wordSlug: null, author: "Jay", body: `old ${i}` });
+    }
+    // Age every existing row past the 10-minute window.
+    await env.DB.prepare("UPDATE comments SET created_at = created_at - ?")
+      .bind(11 * 60 * 1000)
+      .run();
+
+    const allowed = await post({
+      setSlug: "vocabulary-1",
+      wordSlug: null,
+      author: "Jay",
+      body: "window has passed",
+    });
+    expect(allowed.status).toBe(201);
+  });
+});
+
 describe("configuration", () => {
   it("refuses to store a comment when IP_SALT is missing", async () => {
     const original = env.IP_SALT;

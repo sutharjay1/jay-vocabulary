@@ -1,4 +1,5 @@
 import { insertComment, listComments } from "./db";
+import { isRateLimited } from "./ratelimit";
 import { hashIp, validateComment } from "./validate";
 
 export interface Env {
@@ -43,6 +44,10 @@ export default {
       // than per-IP — acceptable locally, never true in front of the CDN.
       const ip = request.headers.get("CF-Connecting-IP") ?? "0.0.0.0";
       const ipHash = await hashIp(ip, env.IP_SALT);
+
+      if (await isRateLimited(env.DB, ipHash, Date.now())) {
+        return json({ error: "Too many comments. Try again in a few minutes." }, 429);
+      }
 
       const comment = await insertComment(env.DB, { ...parsed.value, ipHash });
       return json({ comment }, 201);
