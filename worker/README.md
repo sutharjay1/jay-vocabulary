@@ -6,6 +6,8 @@ D1 (`vocab_comments`).
 
 Live: `https://vocab-comments.sutharjay3635.workers.dev`
 
+Serves comments to `vocabulary.sutharjay.com` and `jay-vocabulary.vercel.app`.
+
 ## Endpoints
 
 | Method | Path | Purpose |
@@ -63,6 +65,28 @@ pnpm run deploy    # publish — note `run`; `deploy` is a reserved pnpm builtin
 
 `schema.sql` is the single source of truth for the table. The tests import it
 raw, so tests and production cannot drift.
+
+## Allowed origins
+
+`ALLOWED_ORIGINS` in `wrangler.toml` is an exact-match list, except that an
+entry may contain `*`, which stands for exactly one DNS label or one port —
+never a dot, never a slash:
+
+| Entry | Covers |
+|---|---|
+| `https://vocabulary.sutharjay.com` | the custom domain |
+| `https://jay-vocabulary.vercel.app` | the Vercel alias |
+| `https://*-sutharjay.vercel.app` | per-deployment Vercel URLs, whose hash changes every deploy |
+| `http://localhost:*` | any local port — `pnpm dev` is 5173, `pnpm preview` is 4173 |
+
+Because a wildcard cannot cross a dot, `https://*-sutharjay.vercel.app` does
+not match `a.b-sutharjay.vercel.app` or `evil-sutharjay.vercel.app.attacker.com`.
+Adding a subdomain means adding an entry — nothing is implied by a parent
+domain. `worker/test/api.test.ts` covers both the accept cases and the attack
+shapes.
+
+Changing this list requires `pnpm run deploy`; a stale edge node can serve the
+old allowlist for a few seconds afterwards.
 
 ## Known limits
 

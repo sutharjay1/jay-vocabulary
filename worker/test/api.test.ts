@@ -379,12 +379,26 @@ describe("CORS on the reject path", () => {
 
 describe("origin matching", () => {
   const ALLOW =
-    "https://jay-vocabulary.vercel.app,https://*-sutharjay.vercel.app,http://localhost:*";
+    "https://vocabulary.sutharjay.com,https://jay-vocabulary.vercel.app,https://*-sutharjay.vercel.app,http://localhost:*";
 
   const allows = (origin: string) => originAllowed(origin, ALLOW);
 
   it("accepts the canonical production origin", () => {
     expect(allows("https://jay-vocabulary.vercel.app")).toBe(true);
+  });
+
+  it("accepts the custom domain", () => {
+    expect(allows("https://vocabulary.sutharjay.com")).toBe(true);
+  });
+
+  it("refuses a sibling subdomain of the custom domain", () => {
+    // The custom domain is listed exactly, so nothing else under it is implied.
+    expect(allows("https://other.sutharjay.com")).toBe(false);
+    expect(allows("https://sutharjay.com")).toBe(false);
+  });
+
+  it("refuses a host that merely ends with the custom domain", () => {
+    expect(allows("https://vocabulary.sutharjay.com.attacker.com")).toBe(false);
   });
 
   it("accepts a per-deployment Vercel URL", () => {

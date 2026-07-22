@@ -9,4 +9,4 @@ database_name = "vocab_comments"
 database_id = "30706758-bdae-4e1c-90f7-c90dd7a0e13a"
 
 [vars]
-ALLOWED_ORIGINS = "https://jay-vocabulary.vercel.app,https://*-sutharjay.vercel.app,http://localhost:*"
+ALLOWED_ORIGINS = "https://vocabulary.sutharjay.com,https://jay-vocabulary.vercel.app,https://*-sutharjay.vercel.app,http://localhost:*"

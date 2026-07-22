@@ -12,7 +12,7 @@ export default defineWorkersConfig({
             // Must stay identical to wrangler.toml's [vars] so the suite
             // exercises the same allowlist production does.
             ALLOWED_ORIGINS:
-              "https://jay-vocabulary.vercel.app,https://*-sutharjay.vercel.app,http://localhost:*",
+              "https://vocabulary.sutharjay.com,https://jay-vocabulary.vercel.app,https://*-sutharjay.vercel.app,http://localhost:*",
           },
         },
       },
