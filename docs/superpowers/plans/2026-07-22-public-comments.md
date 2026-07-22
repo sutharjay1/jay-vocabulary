@@ -456,7 +456,47 @@ describe("POST /api/comments", () => {
     expect(comment.author).toHaveLength(40);
   });
 });
+
+describe("GET /api/comments validation", () => {
+  it("rejects a word filter with no set, rather than returning everything", async () => {
+    await post({ setSlug: "vocabulary-1", wordSlug: "leverage", author: "Jay", body: "kept" });
+    await post({ setSlug: "vocabulary-2", wordSlug: "abate", author: "Jay", body: "other" });
+
+    const response = await call("/api/comments?word=leverage");
+    expect(response.status).toBe(400);
+    expect(((await response.json()) as any).error).toMatch(/requires a set/i);
+  });
+});
+
+describe("configuration", () => {
+  it("refuses to store a comment when IP_SALT is missing", async () => {
+    const original = env.IP_SALT;
+    // Deliberately clearing a required binding for this test. `IP_SALT` is a
+    // plain `string` in `Env`, so this assignment type-checks on its own —
+    // no `@ts-expect-error` is needed or accepted by `tsc`.
+    env.IP_SALT = "";
+    try {
+      const response = await post({
+        setSlug: "vocabulary-1",
+        wordSlug: null,
+        author: "Jay",
+        body: "should not be stored",
+      });
+      expect(response.status).toBe(500);
+      const { comments } = (await (await call("/api/comments")).json()) as any;
+      expect(comments).toHaveLength(0);
+    } finally {
+      env.IP_SALT = original;
+    }
+  });
+});
 ```
+
+A word slug is only meaningful inside a set — two sets can each have a word
+called `leverage` — so a word-only filter is not a valid query and must be
+rejected rather than silently dropping the `WHERE` clause. The `IP_SALT` test
+overrides the binding that `vitest.config.ts` supplies for every other test,
+via the `env` object imported from `cloudflare:test`.
 
 - [ ] **Step 2: Run to verify they fail**
 
@@ -464,7 +504,9 @@ describe("POST /api/comments", () => {
 cd worker && pnpm test
 ```
 
-Expected: FAIL — POST returns 404 because no POST branch exists.
+Expected: FAIL — POST returns 404 because no POST branch exists, and the two
+new describe blocks also fail (200/201 instead of 400/500) since their guards
+don't exist yet.
 
 - [ ] **Step 3: Write `worker/src/validate.ts`**
 
@@ -511,7 +553,7 @@ export function validateComment(
   }
 
   const rawAuthor = typeof raw.author === "string" ? raw.author.trim() : "";
-  const author = rawAuthor === "" ? "Anonymous" : rawAuthor.slice(0, MAX_AUTHOR);
+  const author = rawAuthor === "" ? "Anonymous" : [...rawAuthor].slice(0, MAX_AUTHOR).join("");
 
   return { ok: true, value: { setSlug, wordSlug, author, body } };
 }
@@ -523,6 +565,10 @@ export async function hashIp(ip: string, salt: string): Promise<string> {
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 ```
+
+`[...rawAuthor]` splits by Unicode code point rather than UTF-16 code unit, so
+truncation cannot sever a surrogate pair (e.g. an emoji) straddling position
+40.
 
 - [ ] **Step 4: Write `worker/src/db.ts`**
 
@@ -584,6 +630,13 @@ export async function listComments(
 }
 ```
 
+`listComments` deliberately has no branch for `wordSlug` alone — a word slug
+is only meaningful inside a set (two sets can each have a word called
+`leverage`), so a word-only filter is not a valid query. Falling through to
+the unfiltered `SELECT` for that case would silently return the whole table.
+The guard lives in `index.ts` (Step 5 below), before this function is ever
+called, so `listComments` itself never has to think about it.
+
 - [ ] **Step 5: Rewrite `worker/src/index.ts` to route**
 
 ```ts
@@ -606,6 +659,9 @@ export default {
     if (url.pathname === "/api/comments" && request.method === "GET") {
       const setSlug = url.searchParams.get("set") ?? undefined;
       const wordSlug = url.searchParams.get("word") ?? undefined;
+      if (wordSlug && !setSlug) {
+        return json({ error: "A word filter requires a set." }, 400);
+      }
       return json({ comments: await listComments(env.DB, { setSlug, wordSlug }) });
     }
 
@@ -620,6 +676,13 @@ export default {
       const parsed = validateComment(payload);
       if (!parsed.ok) return json({ error: parsed.error }, 400);
 
+      if (!env.IP_SALT) {
+        return json({ error: "Server misconfigured." }, 500);
+      }
+
+      // Cloudflare always sets this in production. Absent it (local dev), every
+      // caller collapses onto one hash and rate limiting becomes global rather
+      // than per-IP — acceptable locally, never true in front of the CDN.
       const ip = request.headers.get("CF-Connecting-IP") ?? "0.0.0.0";
       const ipHash = await hashIp(ip, env.IP_SALT);
 
@@ -632,13 +695,18 @@ export default {
 };
 ```
 
+The `wordSlug`-without-`setSlug` check 400s before `listComments` is ever
+called, so the missing branch in `db.ts` never silently returns everything.
+The `IP_SALT` check 500s before `hashIp` is called, so a missing secret can
+never produce a stored, unsalted hash while still returning 201.
+
 - [ ] **Step 6: Run the tests**
 
 ```bash
 cd worker && pnpm test
 ```
 
-Expected: PASS, 8 tests.
+Expected: PASS, 10 tests.
 
 - [ ] **Step 7: Commit**
 

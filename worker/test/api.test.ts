@@ -107,3 +107,37 @@ describe("POST /api/comments", () => {
     expect(comment.author).toHaveLength(40);
   });
 });
+
+describe("GET /api/comments validation", () => {
+  it("rejects a word filter with no set, rather than returning everything", async () => {
+    await post({ setSlug: "vocabulary-1", wordSlug: "leverage", author: "Jay", body: "kept" });
+    await post({ setSlug: "vocabulary-2", wordSlug: "abate", author: "Jay", body: "other" });
+
+    const response = await call("/api/comments?word=leverage");
+    expect(response.status).toBe(400);
+    expect(((await response.json()) as any).error).toMatch(/requires a set/i);
+  });
+});
+
+describe("configuration", () => {
+  it("refuses to store a comment when IP_SALT is missing", async () => {
+    const original = env.IP_SALT;
+    // Deliberately clearing a required binding for this test. `IP_SALT` is a
+    // plain `string` in `Env`, so this assignment type-checks on its own —
+    // no `@ts-expect-error` is needed or accepted by `tsc`.
+    env.IP_SALT = "";
+    try {
+      const response = await post({
+        setSlug: "vocabulary-1",
+        wordSlug: null,
+        author: "Jay",
+        body: "should not be stored",
+      });
+      expect(response.status).toBe(500);
+      const { comments } = (await (await call("/api/comments")).json()) as any;
+      expect(comments).toHaveLength(0);
+    } finally {
+      env.IP_SALT = original;
+    }
+  });
+});

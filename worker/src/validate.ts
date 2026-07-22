@@ -40,7 +40,7 @@ export function validateComment(
   }
 
   const rawAuthor = typeof raw.author === "string" ? raw.author.trim() : "";
-  const author = rawAuthor === "" ? "Anonymous" : rawAuthor.slice(0, MAX_AUTHOR);
+  const author = rawAuthor === "" ? "Anonymous" : [...rawAuthor].slice(0, MAX_AUTHOR).join("");
 
   return { ok: true, value: { setSlug, wordSlug, author, body } };
 }

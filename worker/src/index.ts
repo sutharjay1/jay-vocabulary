@@ -17,6 +17,9 @@ export default {
     if (url.pathname === "/api/comments" && request.method === "GET") {
       const setSlug = url.searchParams.get("set") ?? undefined;
       const wordSlug = url.searchParams.get("word") ?? undefined;
+      if (wordSlug && !setSlug) {
+        return json({ error: "A word filter requires a set." }, 400);
+      }
       return json({ comments: await listComments(env.DB, { setSlug, wordSlug }) });
     }
 
@@ -31,6 +34,13 @@ export default {
       const parsed = validateComment(payload);
       if (!parsed.ok) return json({ error: parsed.error }, 400);
 
+      if (!env.IP_SALT) {
+        return json({ error: "Server misconfigured." }, 500);
+      }
+
+      // Cloudflare always sets this in production. Absent it (local dev), every
+      // caller collapses onto one hash and rate limiting becomes global rather
+      // than per-IP — acceptable locally, never true in front of the CDN.
       const ip = request.headers.get("CF-Connecting-IP") ?? "0.0.0.0";
       const ipHash = await hashIp(ip, env.IP_SALT);
 
