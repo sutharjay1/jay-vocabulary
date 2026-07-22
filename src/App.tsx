@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Rail, TopBar } from "./components/Chrome";
 import { getSet } from "./sets";
+import { page } from "./ui";
 import Library from "./routes/Library";
 import SetOverview from "./routes/SetOverview";
 import Words from "./routes/Words";
@@ -31,7 +32,7 @@ export default function App() {
   return (
     <>
       <Head />
-      <main className="container">
+      <main className={page}>
         <TopBar />
         <Rail />
         <Routes>

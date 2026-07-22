@@ -1,5 +1,18 @@
 import { Link, Navigate, useParams, useSearchParams } from "react-router-dom";
 import { getSet, type VocabSet } from "../sets";
+import { block, controlLink, controls, ctaArrow, ctaLink, eyebrow, idx, lede, section, title, tldr } from "../ui";
+
+/* One-shot enter, staggered 45ms per item. Keyframes are right for a
+   predetermined page-load sequence; reduced motion drops the movement. */
+const riseIn =
+  "translate-y-2 opacity-0 animate-rise motion-reduce:translate-y-0 motion-reduce:animate-fade";
+const delays = ["", "[animation-delay:45ms]", "[animation-delay:90ms]", "[animation-delay:135ms]", "[animation-delay:180ms]"];
+
+const spine =
+  "relative before:absolute before:left-1 before:top-[9px] before:bottom-[9px] before:w-px before:bg-border before:content-['']";
+const dot =
+  "absolute left-0 top-1.5 h-[9px] w-[9px] rounded-full bg-foreground shadow-[0_0_0_4px_var(--color-background)]";
+const syns = "flex flex-wrap gap-x-[18px] gap-y-1.5 text-sm text-muted-foreground [&>span]:whitespace-nowrap";
 
 export default function Words() {
   const { set: slug } = useParams();
@@ -17,69 +30,75 @@ export default function Words() {
 
   return (
     <>
-      <p className="eyebrow">
+      <p className={eyebrow}>
         {set.title} · word {word.n} of {set.words.length} · {word.pos}
       </p>
-      <h1>{word.term}</h1>
-      <p className="lede">{word.definition}</p>
+      <h1 className={title}>{word.term}</h1>
+      <p className={lede}>{word.definition}</p>
 
-      <div className="tl-controls">
+      <div className={controls}>
         {prev ? (
-          <Link to={`/${set.slug}/words?w=${prev.slug}`}>← {prev.term}</Link>
+          <Link className={controlLink} to={`/${set.slug}/words?w=${prev.slug}`}>
+            ← {prev.term}
+          </Link>
         ) : (
-          <Link to={`/${set.slug}`}>← {set.title}</Link>
+          <Link className={controlLink} to={`/${set.slug}`}>
+            ← {set.title}
+          </Link>
         )}
-        <span className="sep">·</span>
-        <Link to={`/${set.slug}/words`}>All {set.words.length}</Link>
-        <span className="sep">·</span>
+        <span className="text-border">·</span>
+        <Link className={controlLink} to={`/${set.slug}/words`}>
+          All {set.words.length}
+        </Link>
+        <span className="text-border">·</span>
         {next ? (
-          <Link to={`/${set.slug}/words?w=${next.slug}`}>{next.term} →</Link>
+          <Link className={controlLink} to={`/${set.slug}/words?w=${next.slug}`}>
+            {next.term} →
+          </Link>
         ) : (
-          <Link to={`/${set.slug}/quiz`}>Quiz →</Link>
+          <Link className={controlLink} to={`/${set.slug}/quiz`}>
+            Quiz →
+          </Link>
         )}
       </div>
 
-      <div className="block" style={{ marginTop: 0 }}>
-        <h2 className="section">Synonyms</h2>
-        <div className="syns">
+      <div>
+        <h2 className={section}>Synonyms</h2>
+        <div className={`mt-2.5 ${syns}`}>
           {word.synonyms.map((s) => (
             <span key={s}>{s}</span>
           ))}
         </div>
       </div>
 
-      <div className="block">
-        <h2 className="section">In a sentence</h2>
-        <div className="timeline" style={{ marginTop: 18 }}>
+      <div className={block}>
+        <h2 className={section}>In a sentence</h2>
+        <div className={`mt-[18px] ${spine}`}>
           {word.examples.map((ex, n) => (
-            <div className="daygroup" key={ex}>
-              <span className="dot" />
-              <div className="dayhead">
-                <span className="daylabel">Example {n + 1}</span>
+            <div className={`relative pb-6 pl-[30px] last:pb-0 ${riseIn} ${delays[n] ?? ""}`} key={ex}>
+              <span className={dot} />
+              <div className="mb-1.5 flex items-baseline gap-[9px]">
+                <span className="text-sm font-semibold text-foreground">Example {n + 1}</span>
               </div>
-              <p className="daydef" style={{ color: "var(--foreground)" }}>
-                {ex}
-              </p>
+              <p className="m-0 text-[15px] leading-relaxed text-foreground text-pretty">{ex}</p>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="block">
-        <h2 className="section">Note</h2>
-        <p className="tldr" style={{ marginTop: 12 }}>
-          {word.note}
-        </p>
+      <div className={block}>
+        <h2 className={section}>Note</h2>
+        <p className={`${tldr} mt-3`}>{word.note}</p>
       </div>
 
-      <p className="cta">
+      <p className="mt-9">
         {next ? (
-          <Link to={`/${set.slug}/words?w=${next.slug}`}>
-            Next — {next.term} <span className="arw">→</span>
+          <Link className={ctaLink} to={`/${set.slug}/words?w=${next.slug}`}>
+            Next — {next.term} <span className={ctaArrow}>→</span>
           </Link>
         ) : (
-          <Link to={`/${set.slug}/quiz`}>
-            Take the quiz <span className="arw">→</span>
+          <Link className={ctaLink} to={`/${set.slug}/quiz`}>
+            Take the quiz <span className={ctaArrow}>→</span>
           </Link>
         )}
       </p>
@@ -90,51 +109,63 @@ export default function Words() {
 function AllWords({ set }: { set: VocabSet }) {
   return (
     <>
-      <p className="eyebrow">{set.title} · the full set</p>
-      <h1>All {set.words.length}, in full</h1>
-      <p className="lede">
+      <p className={eyebrow}>{set.title} · the full set</p>
+      <h1 className={title}>All {set.words.length}, in full</h1>
+      <p className={lede}>
         Every definition, synonym set and example sentence in one place. Open a single word for its
         usage note.
       </p>
 
-      <div className="tl-controls">
-        <span className="rng">{set.words.length} words</span>
-        <span className="sep">·</span>
-        <Link to={`/${set.slug}`}>{set.title}</Link>
-        <span className="sep">·</span>
-        <Link to={`/${set.slug}/quiz`}>Quiz</Link>
+      <div className={controls}>
+        <span className="font-semibold text-foreground">{set.words.length} words</span>
+        <span className="text-border">·</span>
+        <Link className={controlLink} to={`/${set.slug}`}>
+          {set.title}
+        </Link>
+        <span className="text-border">·</span>
+        <Link className={controlLink} to={`/${set.slug}/quiz`}>
+          Quiz
+        </Link>
       </div>
 
-      <div className="timeline">
-        {set.words.map((w) => (
-          <div className="daygroup" key={w.slug}>
-            <span className="dot" />
-            <div className="dayhead">
-              <span className="idx">{w.n}</span>
-              <Link className="daylabel" to={`/${set.slug}/words?w=${w.slug}`}>
+      <div className={spine}>
+        {set.words.map((w, n) => (
+          <div className={`relative pb-6 pl-[30px] last:pb-0 ${riseIn} ${delays[n] ?? ""}`} key={w.slug}>
+            <span className={dot} />
+            <div className="mb-1.5 flex items-baseline gap-[9px]">
+              <span className={`${idx} w-auto`}>{w.n}</span>
+              <Link
+                className="text-sm font-semibold text-foreground"
+                to={`/${set.slug}/words?w=${w.slug}`}
+              >
                 {w.term}
               </Link>
-              <span className="daycount">{w.pos}</span>
+              <span className="text-[12.5px] text-muted-foreground">{w.pos}</span>
             </div>
-            <p className="daydef">{w.definition}</p>
-            <div className="syns" style={{ marginTop: 0, marginBottom: 10 }}>
+            <p className="mb-2 text-[15px] leading-relaxed text-muted-foreground text-pretty">
+              {w.definition}
+            </p>
+            <div className={`mb-2.5 ${syns}`}>
               {w.synonyms.map((s) => (
                 <span key={s}>{s}</span>
               ))}
             </div>
             {w.examples.map((ex) => (
-              <div className="tl-commit" key={ex}>
-                <span className="msg">{ex}</span>
-                <span className="ln" />
+              <div
+                className="group/ex flex items-center gap-2 border-b border-border py-2 last:border-b-0 max-sm:flex-wrap"
+                key={ex}
+              >
+                <span className="text-[15px] font-medium text-foreground">{ex}</span>
+                <span className="leader group-hover/ex:opacity-100 max-sm:hidden" />
               </div>
             ))}
           </div>
         ))}
       </div>
 
-      <p className="cta">
-        <Link to={`/${set.slug}/quiz`}>
-          Take the quiz <span className="arw">→</span>
+      <p className="mt-9">
+        <Link className={ctaLink} to={`/${set.slug}/quiz`}>
+          Take the quiz <span className={ctaArrow}>→</span>
         </Link>
       </p>
     </>

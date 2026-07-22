@@ -11,9 +11,9 @@ function useSet() {
   return getSet(pathname.split("/")[1]);
 }
 
-/* Every rail and popover entry carries a mark in a fixed-width slot: a numeral
-   for the words, an icon for everything else. One slot width keeps the labels
-   flush regardless of which kind of mark a row has. */
+/* Every entry carries a mark in a fixed-width slot: a numeral for the words, an
+   icon for everything else. One slot width keeps the labels flush regardless of
+   which kind of mark a row has. */
 function useItems(): Item[] {
   const set = useSet();
 
@@ -22,23 +22,32 @@ function useItems(): Item[] {
     return SETS.map((s) => ({
       href: `/${s.slug}`,
       label: s.title,
-      mark: <IconDoc className="ico" />,
+      mark: <IconDoc className="block h-3.5 w-3.5" />,
     }));
   }
 
   const items: Item[] = set.words.map((w) => ({
     href: `/${set.slug}/words?w=${w.slug}`,
     label: w.term,
-    mark: <span className="num">{w.n}</span>,
+    mark: <span className="text-[11.5px] font-semibold leading-none tabular-nums">{w.n}</span>,
   }));
   items.push({
     href: `/${set.slug}/words`,
     label: "All five",
-    mark: <IconList className="ico" />,
+    mark: <IconList className="block h-3.5 w-3.5" />,
     sep: true,
   });
-  items.push({ href: `/${set.slug}/quiz`, label: "Quiz", mark: <IconQuiz className="ico" /> });
-  items.push({ href: "/", label: "All sets", mark: <IconLibrary className="ico" />, sep: true });
+  items.push({
+    href: `/${set.slug}/quiz`,
+    label: "Quiz",
+    mark: <IconQuiz className="block h-3.5 w-3.5" />,
+  });
+  items.push({
+    href: "/",
+    label: "All sets",
+    mark: <IconLibrary className="block h-3.5 w-3.5" />,
+    sep: true,
+  });
   return items;
 }
 
@@ -54,50 +63,66 @@ function useCurrent() {
   return `/${set.slug}`;
 }
 
+/* The mark inherits the link's colour, so both move together on hover. */
+const markSlot = "flex h-4 w-4 flex-none items-center justify-center";
+
 function Entry({
   it,
   current,
+  className,
   tabIndex,
   onNavigate,
 }: {
   it: Item;
   current: string;
+  className: string;
   tabIndex?: number;
   onNavigate?: () => void;
 }) {
   return (
     <Link
       to={it.href}
+      className={className}
       aria-current={current === it.href ? "page" : undefined}
       onClick={onNavigate}
       tabIndex={tabIndex}
     >
-      <span className="mark" aria-hidden="true">
+      <span className={markSlot} aria-hidden="true">
         {it.mark}
       </span>
-      <span className="lbl">{it.label}</span>
+      <span>{it.label}</span>
     </Link>
   );
 }
+
+const railLink =
+  "flex items-center gap-[9px] py-[3px] text-sm text-muted-foreground transition-colors duration-150 hover:text-foreground aria-[current=page]:font-semibold aria-[current=page]:text-foreground";
 
 /* Right-hand rail — persistent on wide viewports, mirrors the popover. */
 export function Rail() {
   const items = useItems();
   const current = useCurrent();
   return (
-    <nav className="rail" aria-label="Index">
+    <nav
+      className="fixed right-10 top-[78px] z-20 hidden flex-col gap-0.5 min-[1080px]:flex print:hidden"
+      aria-label="Index"
+    >
       {items.map((it) => (
-        <span key={it.href} style={{ display: "contents" }}>
-          {it.sep && <span className="railsep" aria-hidden="true" />}
-          <Entry it={it} current={current} />
+        <span key={it.href} className="contents">
+          {it.sep && <span className="my-2 h-px bg-border" aria-hidden="true" />}
+          <Entry it={it} current={current} className={railLink} />
         </span>
       ))}
     </nav>
   );
 }
 
+const popLink =
+  "flex items-center gap-2.5 whitespace-nowrap rounded-md px-3 py-[7px] text-sm text-muted-foreground transition-colors duration-150 hover:bg-foreground/5 hover:text-foreground aria-[current=page]:font-semibold aria-[current=page]:text-foreground";
+
 /* Wordmark + index popover. The popover scales from its trigger (top right),
-   entering at 180ms and exiting at 130ms — exits run shorter than enters. */
+   entering at 180ms and exiting at 130ms — exits run shorter than enters.
+   Radius 12 outside, 6 inside with 6px padding: concentric. */
 export function TopBar() {
   const set = useSet();
   const items = useItems();
@@ -129,14 +154,22 @@ export function TopBar() {
   }, [open]);
 
   return (
-    <div className="topbar">
-      <Link className="wordmark" to="/" aria-label="Vocabulary — all sets">
-        Vocabulary<span className="sub">{set ? set.title.replace(/^Vocabulary /, "Set ") : "Library"}</span>
+    <div className="flex items-center justify-between gap-4">
+      <Link
+        className="inline-flex items-baseline gap-2 text-[15px] font-semibold leading-none tracking-[-0.005em] text-foreground"
+        to="/"
+        aria-label="Vocabulary — all sets"
+      >
+        Vocabulary
+        <span className="text-[13px] font-medium tracking-[0.02em] text-muted-foreground">
+          {set ? set.title.replace(/^Vocabulary /, "Set ") : "Library"}
+        </span>
       </Link>
-      <div className="wnav">
+
+      <div className="relative flex items-center">
         <button
           ref={btnRef}
-          className="calbtn"
+          className="relative -my-1.5 -mr-2 inline-flex h-[34px] w-[34px] items-center justify-center rounded-[9px] text-muted-foreground transition-[color,background-color,transform] duration-150 ease-out-quint after:absolute after:-inset-1.5 after:content-[''] hover:bg-foreground/5 hover:text-foreground active:scale-[0.97] motion-reduce:active:scale-100 print:hidden"
           type="button"
           aria-label={set ? "Jump to a word" : "Jump to a set"}
           aria-haspopup="menu"
@@ -147,20 +180,27 @@ export function TopBar() {
             setOpen((o) => !o);
           }}
         >
-          <IconMenu />
+          <IconMenu className="block h-[18px] w-[18px]" />
         </button>
+
         <nav
           ref={popRef}
-          className={"pop" + (open ? " open" : "")}
+          className={
+            "absolute right-0 top-[calc(100%+10px)] z-30 flex min-w-[180px] origin-top-right flex-col gap-0.5 rounded-xl bg-background p-1.5 shadow-pop transition-[opacity,transform] ease-out-quint motion-reduce:scale-100 " +
+            (open
+              ? "pointer-events-auto scale-100 opacity-100 duration-[180ms]"
+              : "pointer-events-none scale-[0.97] opacity-0 duration-[130ms]")
+          }
           aria-label="Index"
           style={instant ? { transitionDuration: "0ms" } : undefined}
         >
           {items.map((it) => (
-            <span key={it.href} style={{ display: "contents" }}>
-              {it.sep && <span className="popsep" aria-hidden="true" />}
+            <span key={it.href} className="contents">
+              {it.sep && <span className="mx-1.5 my-[5px] h-px bg-border" aria-hidden="true" />}
               <Entry
                 it={it}
                 current={current}
+                className={popLink}
                 tabIndex={open ? 0 : -1}
                 onNavigate={() => setOpen(false)}
               />
