@@ -25,3 +25,85 @@ describe("GET /api/comments", () => {
     expect(await response.json()).toEqual({ comments: [] });
   });
 });
+
+function post(body: unknown) {
+  return call("/api/comments", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+describe("POST /api/comments", () => {
+  it("stores a comment and returns it", async () => {
+    const response = await post({
+      setSlug: "vocabulary-1",
+      wordSlug: "leverage",
+      author: "Jay",
+      body: "The lever image is what makes this stick.",
+    });
+    expect(response.status).toBe(201);
+    const { comment } = (await response.json()) as any;
+    expect(comment.set_slug).toBe("vocabulary-1");
+    expect(comment.word_slug).toBe("leverage");
+    expect(comment.author).toBe("Jay");
+    expect(comment.body).toBe("The lever image is what makes this stick.");
+    expect(typeof comment.id).toBe("string");
+    expect(comment.created_at).toBeGreaterThan(0);
+  });
+
+  it("never returns the ip hash", async () => {
+    await post({ setSlug: "vocabulary-1", wordSlug: null, author: "Jay", body: "note" });
+    const { comments } = (await (await call("/api/comments")).json()) as any;
+    expect(comments[0]).not.toHaveProperty("ip_hash");
+  });
+
+  it("defaults a blank author to Anonymous", async () => {
+    const response = await post({
+      setSlug: "vocabulary-1",
+      wordSlug: null,
+      author: "   ",
+      body: "no name given",
+    });
+    const { comment } = (await response.json()) as any;
+    expect(comment.author).toBe("Anonymous");
+  });
+
+  it("rejects an empty body", async () => {
+    const response = await post({
+      setSlug: "vocabulary-1",
+      wordSlug: null,
+      author: "Jay",
+      body: "   \n  ",
+    });
+    expect(response.status).toBe(400);
+    expect(((await response.json()) as any).error).toMatch(/empty/i);
+  });
+
+  it("rejects a body over 1000 characters", async () => {
+    const response = await post({
+      setSlug: "vocabulary-1",
+      wordSlug: null,
+      author: "Jay",
+      body: "x".repeat(1001),
+    });
+    expect(response.status).toBe(400);
+    expect(((await response.json()) as any).error).toMatch(/1000/);
+  });
+
+  it("rejects a missing set slug", async () => {
+    const response = await post({ wordSlug: null, author: "Jay", body: "orphan" });
+    expect(response.status).toBe(400);
+  });
+
+  it("truncates an over-long author to 40 characters", async () => {
+    const response = await post({
+      setSlug: "vocabulary-1",
+      wordSlug: null,
+      author: "y".repeat(80),
+      body: "long name",
+    });
+    const { comment } = (await response.json()) as any;
+    expect(comment.author).toHaveLength(40);
+  });
+});
