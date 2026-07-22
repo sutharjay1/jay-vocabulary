@@ -119,6 +119,48 @@ describe("GET /api/comments validation", () => {
   });
 });
 
+describe("filtering", () => {
+  beforeEach(async () => {
+    await post({ setSlug: "vocabulary-1", wordSlug: "leverage", author: "Jay", body: "one" });
+    await post({ setSlug: "vocabulary-1", wordSlug: "navigate", author: "Jay", body: "two" });
+    await post({ setSlug: "vocabulary-1", wordSlug: null, author: "Jay", body: "set level" });
+    await post({ setSlug: "vocabulary-2", wordSlug: "abate", author: "Tutor", body: "other set" });
+  });
+
+  it("returns everything when unfiltered", async () => {
+    const { comments } = (await (await call("/api/comments")).json()) as any;
+    expect(comments).toHaveLength(4);
+  });
+
+  it("filters to one set, including its set-level comments", async () => {
+    const { comments } = (await (
+      await call("/api/comments?set=vocabulary-1")
+    ).json()) as any;
+    expect(comments).toHaveLength(3);
+    expect(comments.every((c: any) => c.set_slug === "vocabulary-1")).toBe(true);
+  });
+
+  it("filters to one word", async () => {
+    const { comments } = (await (
+      await call("/api/comments?set=vocabulary-1&word=leverage")
+    ).json()) as any;
+    expect(comments).toHaveLength(1);
+    expect(comments[0].body).toBe("one");
+  });
+
+  it("returns newest first", async () => {
+    const { comments } = (await (await call("/api/comments")).json()) as any;
+    const times = comments.map((c: any) => c.created_at);
+    expect([...times].sort((a, b) => b - a)).toEqual(times);
+  });
+
+  it("returns an empty list for an unknown set rather than erroring", async () => {
+    const response = await call("/api/comments?set=vocabulary-99");
+    expect(response.status).toBe(200);
+    expect(((await response.json()) as any).comments).toEqual([]);
+  });
+});
+
 describe("configuration", () => {
   it("refuses to store a comment when IP_SALT is missing", async () => {
     const original = env.IP_SALT;
