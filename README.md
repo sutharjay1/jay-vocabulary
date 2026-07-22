@@ -68,3 +68,16 @@ pnpm preview
 
 Deployed on Vercel as a static SPA; `vercel.json` rewrites non-asset paths to
 `index.html` so deep links resolve on a hard refresh.
+
+### Comments
+
+Comments are served by a Cloudflare Worker in `worker/`, backed by D1. The
+frontend needs one variable:
+
+```
+VITE_COMMENTS_API=https://vocab-comments.sutharjay3635.workers.dev
+```
+
+Without it the comment surfaces are hidden and the rest of the site works
+unchanged. Worker secrets (`ADMIN_TOKEN`, `IP_SALT`) live in Wrangler and are
+never committed. See `worker/README.md` for deploys.
