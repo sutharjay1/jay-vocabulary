@@ -1,38 +1,41 @@
-import { Link, useSearchParams } from "react-router-dom";
-import { WORDS } from "../data";
+import { Link, Navigate, useParams, useSearchParams } from "react-router-dom";
+import { getSet, type VocabSet } from "../sets";
 
 export default function Words() {
+  const { set: slug } = useParams();
+  const set = getSet(slug);
   const [params] = useSearchParams();
-  const slug = params.get("w");
-  const i = WORDS.findIndex((w) => w.slug === slug);
-  const word = i >= 0 ? WORDS[i] : null;
 
-  if (!word) return <AllWords />;
+  if (!set) return <Navigate to="/" replace />;
 
-  const prev = WORDS[i - 1];
-  const next = WORDS[i + 1];
+  const i = set.words.findIndex((w) => w.slug === params.get("w"));
+  if (i < 0) return <AllWords set={set} />;
+
+  const word = set.words[i];
+  const prev = set.words[i - 1];
+  const next = set.words[i + 1];
 
   return (
     <>
       <p className="eyebrow">
-        Word {word.n} of {WORDS.length} · {word.pos}
+        {set.title} · word {word.n} of {set.words.length} · {word.pos}
       </p>
       <h1>{word.term}</h1>
       <p className="lede">{word.definition}</p>
 
       <div className="tl-controls">
         {prev ? (
-          <Link to={`/words?w=${prev.slug}`}>← {prev.term}</Link>
+          <Link to={`/${set.slug}/words?w=${prev.slug}`}>← {prev.term}</Link>
         ) : (
-          <Link to="/">← Overview</Link>
+          <Link to={`/${set.slug}`}>← {set.title}</Link>
         )}
         <span className="sep">·</span>
-        <Link to="/words">All five</Link>
+        <Link to={`/${set.slug}/words`}>All {set.words.length}</Link>
         <span className="sep">·</span>
         {next ? (
-          <Link to={`/words?w=${next.slug}`}>{next.term} →</Link>
+          <Link to={`/${set.slug}/words?w=${next.slug}`}>{next.term} →</Link>
         ) : (
-          <Link to="/quiz">Quiz →</Link>
+          <Link to={`/${set.slug}/quiz`}>Quiz →</Link>
         )}
       </div>
 
@@ -71,11 +74,11 @@ export default function Words() {
 
       <p className="cta">
         {next ? (
-          <Link to={`/words?w=${next.slug}`}>
+          <Link to={`/${set.slug}/words?w=${next.slug}`}>
             Next — {next.term} <span className="arw">→</span>
           </Link>
         ) : (
-          <Link to="/quiz">
+          <Link to={`/${set.slug}/quiz`}>
             Take the quiz <span className="arw">→</span>
           </Link>
         )}
@@ -84,30 +87,31 @@ export default function Words() {
   );
 }
 
-function AllWords() {
+function AllWords({ set }: { set: VocabSet }) {
   return (
     <>
-      <p className="eyebrow">The full set</p>
-      <h1>All five, in full</h1>
+      <p className="eyebrow">{set.title} · the full set</p>
+      <h1>All {set.words.length}, in full</h1>
       <p className="lede">
         Every definition, synonym set and example sentence in one place. Open a single word for its
         usage note.
       </p>
 
       <div className="tl-controls">
-        <span className="rng">{WORDS.length} words</span>
+        <span className="rng">{set.words.length} words</span>
         <span className="sep">·</span>
-        <Link to="/">Overview</Link>
+        <Link to={`/${set.slug}`}>{set.title}</Link>
         <span className="sep">·</span>
-        <Link to="/quiz">Quiz</Link>
+        <Link to={`/${set.slug}/quiz`}>Quiz</Link>
       </div>
 
       <div className="timeline">
-        {WORDS.map((w) => (
+        {set.words.map((w) => (
           <div className="daygroup" key={w.slug}>
             <span className="dot" />
             <div className="dayhead">
-              <Link className="daylabel" to={`/words?w=${w.slug}`}>
+              <span className="idx">{w.n}</span>
+              <Link className="daylabel" to={`/${set.slug}/words?w=${w.slug}`}>
                 {w.term}
               </Link>
               <span className="daycount">{w.pos}</span>
@@ -129,7 +133,7 @@ function AllWords() {
       </div>
 
       <p className="cta">
-        <Link to="/quiz">
+        <Link to={`/${set.slug}/quiz`}>
           Take the quiz <span className="arw">→</span>
         </Link>
       </p>

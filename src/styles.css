@@ -29,11 +29,24 @@ a:hover{text-decoration:underline}
 
 /* persistent rail (right) */
 .rail{position:fixed;top:78px;right:40px;z-index:20;display:none;flex-direction:column;gap:2px}
-.rail a{font-size:14px;color:var(--muted-foreground);text-decoration:none;padding:3px 0;transition:color 150ms ease}
+.rail a{display:flex;align-items:center;gap:9px;font-size:14px;color:var(--muted-foreground);
+  text-decoration:none;padding:3px 0;transition:color 150ms ease}
 .rail a[aria-current="page"]{color:var(--foreground);font-weight:600}
 .rail .railsep{height:1px;background:var(--border);margin:8px 0 7px}
 @media(hover:hover) and (pointer:fine){.rail a:hover{color:var(--foreground);text-decoration:none}}
 @media(min-width:1080px){.rail{display:flex}}
+
+/* Marks in the rail and popover: a numeral for words, an icon for everything
+   else, both in one fixed-width slot so the labels stay flush. */
+.mark{flex:none;display:inline-flex;align-items:center;justify-content:center;
+  width:16px;height:16px;color:var(--muted-foreground);transition:color 150ms ease}
+.mark .num{font-size:11.5px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums;
+  letter-spacing:0;font-feature-settings:"tnum"}
+.mark .ico{width:14px;height:14px;display:block}
+.rail a[aria-current="page"] .mark,.pop a[aria-current="page"] .mark{color:var(--foreground)}
+@media(hover:hover) and (pointer:fine){
+  .rail a:hover .mark,.pop a:hover .mark{color:var(--foreground)}
+}
 
 /* index toggle + popover */
 .wnav{position:relative;display:flex;align-items:center}
@@ -53,7 +66,8 @@ a:hover{text-decoration:underline}
   transition:opacity 130ms var(--ease-out),transform 130ms var(--ease-out)}
 .pop.open{opacity:1;transform:scale(1);pointer-events:auto;
   transition:opacity 180ms var(--ease-out),transform 180ms var(--ease-out)}
-.pop a{font-size:14px;color:var(--muted-foreground);text-decoration:none;padding:7px 12px;
+.pop a{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--muted-foreground);
+  text-decoration:none;padding:7px 12px;
   border-radius:6px;white-space:nowrap;transition:color 150ms ease,background-color 150ms ease}
 .pop a[aria-current="page"]{color:var(--foreground);font-weight:600}
 .pop .popsep{height:1px;background:var(--border);margin:5px 6px}
@@ -67,6 +81,43 @@ h1{color:var(--foreground);font-size:30px;line-height:1.15;font-weight:600;lette
 .lede{margin:0;font-size:16px;color:var(--muted-foreground);max-width:54ch;text-wrap:pretty}
 h2.section{color:var(--foreground);font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;margin:0 0 4px}
 .block{margin-top:56px}
+
+/* ===== library cards =====
+   Radius 16 with 20px padding and no nested rounded surfaces, so there is no
+   concentric radius to reconcile. The hairline in the card head is the same
+   fade-in leader used by every row on the site. */
+.cards{display:flex;flex-direction:column;gap:14px;margin-top:40px}
+.card{display:block;padding:20px 22px 18px;border:1px solid var(--border);border-radius:16px;
+  background:var(--background);text-decoration:none;
+  transition:border-color 200ms ease,box-shadow 200ms ease,transform 150ms var(--ease-out)}
+.card:hover{text-decoration:none}
+.card:active{transform:scale(.99)}
+@media(hover:hover) and (pointer:fine){
+  .card:hover{border-color:#d4d4d8;
+    box-shadow:0 1px 2px -1px rgba(9,9,11,.06),0 6px 16px -8px rgba(9,9,11,.14)}
+}
+.cardhead{display:flex;align-items:center;gap:10px}
+.cardn{font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--muted-foreground);white-space:nowrap;font-variant-numeric:tabular-nums}
+.cardline{height:1px;flex:1;min-width:12px;background:var(--border);opacity:0;transition:opacity .3s ease}
+.card:hover .cardline{opacity:1}
+.cardadded{font-size:13px;color:var(--muted-foreground);white-space:nowrap;font-variant-numeric:tabular-nums}
+.cardtitle{margin:12px 0 0;color:var(--foreground);font-size:21px;font-weight:600;
+  letter-spacing:-.01em;line-height:1.2}
+.cardfile{display:flex;align-items:center;gap:7px;margin:8px 0 0;color:var(--muted-foreground)}
+.cardfile .fileico{flex:none;width:15px;height:15px;display:block}
+.cardlede{margin:12px 0 0;font-size:15px;line-height:1.6;color:var(--muted-foreground);text-wrap:pretty}
+.cardfoot{display:flex;align-items:center;justify-content:space-between;gap:14px;
+  margin-top:16px;padding-top:14px;border-top:1px solid var(--border);flex-wrap:wrap}
+.cardstats{font-size:13px;color:var(--muted-foreground);font-variant-numeric:tabular-nums}
+.cardgo{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;
+  color:var(--foreground);white-space:nowrap}
+.cardgo .arw{width:15px;height:15px;display:block;transition:transform 200ms var(--ease-out)}
+.card:hover .cardgo .arw{transform:translateX(3px)}
+
+/* numeral in a word row — same slot width as the rail marks */
+.idx{flex:none;width:16px;font-size:12px;font-weight:600;color:var(--muted-foreground);
+  font-variant-numeric:tabular-nums;line-height:inherit}
 
 /* generic label/value rows with animated divider */
 .row{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid transparent}
@@ -104,7 +155,8 @@ h2.section{color:var(--foreground);font-size:13px;font-weight:600;letter-spacing
 .feat .title{color:var(--foreground);font-weight:500}
 .feat .pr{color:var(--muted-foreground);font-size:13px;white-space:nowrap}
 .feat .ln{height:1px;flex:1;min-width:12px;background:var(--border);opacity:0;transition:opacity .3s ease}
-.feat p{margin:6px 0 0;color:var(--muted-foreground);font-size:15px;line-height:1.6;text-wrap:pretty}
+.feat p{margin:6px 0 0;color:var(--muted-foreground);font-size:15px;line-height:1.6;text-wrap:pretty;padding-left:24px}
+.feat .head .idx{width:16px}
 @media(hover:hover) and (pointer:fine){.feat:hover .ln{opacity:1}}
 a.feat{display:block;text-decoration:none}
 a.feat:hover{text-decoration:none}
@@ -133,6 +185,7 @@ a.feat:hover{text-decoration:none}
 .daygroup:nth-child(5){animation-delay:180ms}
 .dot{position:absolute;left:0;top:6px;width:9px;height:9px;border-radius:50%;background:var(--foreground);box-shadow:0 0 0 4px var(--background)}
 .dayhead{display:flex;align-items:baseline;gap:9px;margin-bottom:6px}
+.dayhead .idx{width:auto}
 .daylabel{color:var(--foreground);font-weight:600;font-size:14px}
 .daycount{color:var(--muted-foreground);font-size:12.5px}
 .daydef{margin:0 0 8px;font-size:15px;line-height:1.6;text-wrap:pretty}
@@ -155,6 +208,8 @@ a.feat:hover{text-decoration:none}
 .qhead{display:flex;align-items:baseline;gap:10px}
 .qnum{color:var(--muted-foreground);font-size:13px;font-variant-numeric:tabular-nums;min-width:18px}
 .qprompt{color:var(--foreground);font-weight:500;text-wrap:pretty}
+.qlines{margin:10px 0 0 28px;padding:0;list-style:none}
+.qlines li{padding:3px 0}
 .opts{margin:12px 0 0 28px;display:flex;flex-direction:column}
 .opt{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px 9px 0;
   border:0;border-bottom:1px solid var(--border);background:transparent;text-align:left;
@@ -176,9 +231,11 @@ a.feat:hover{text-decoration:none}
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
   background-repeat:no-repeat;background-position:right 2px center;background-size:13px;
   transition:border-color 150ms ease,color 150ms ease}
-/* Inline in a sentence: no chevron, so the trailing comma sits tight against
-   the slot instead of floating 20px away from it. */
-.pick.inline{padding-right:2px;background-image:none}
+/* Inline in a sentence: no chevron, and sized to the selected option rather
+   than to the widest one, so the trailing comma sits tight against the slot
+   instead of floating after a full-width control. Browsers without
+   field-sizing keep the old behaviour, which is merely looser. */
+.pick.inline{padding-right:2px;background-image:none;field-sizing:content}
 .pick:disabled{cursor:default;opacity:1;background-image:none;padding-right:2px}
 .pick[data-empty="true"]{color:var(--muted-foreground);font-weight:500}
 @media(hover:hover) and (pointer:fine){.pick:hover:not(:disabled){border-color:var(--foreground)}}
@@ -245,11 +302,15 @@ a.feat:hover{text-decoration:none}
   .tl-commit .ln{display:none}
   .mrow{flex-wrap:wrap;gap:2px 10px}
   .mrow .line{display:none}
+  .card{padding:18px 18px 16px;border-radius:14px}
+  .cardtitle{font-size:19px}
+  .cardfoot{gap:8px}
 }
 @media(prefers-reduced-motion:reduce){
   .pop,.pop.open{transform:none;transition:opacity 120ms ease}
   .calbtn{transition:color 150ms ease,background-color 150ms ease}
-  .calbtn:active,.btn:active,.reveal:active,.opt:active{transform:none}
+  .calbtn:active,.btn:active,.reveal:active,.opt:active,.card:active{transform:none}
+  .card:hover .cardgo .arw{transform:none}
   .daygroup{animation:tlFade 300ms ease forwards;transform:none}
   @keyframes tlFade{to{opacity:1}}
   .cta a .arw{transition:none}
@@ -259,7 +320,8 @@ a.feat:hover{text-decoration:none}
 }
 @media print{
   body{padding:24px 0}
-  .row .line,.feat .ln,.tl-commit .ln,.mrow .line{opacity:1}
+  .row .line,.feat .ln,.tl-commit .ln,.mrow .line,.cardline{opacity:1}
+  .card{break-inside:avoid}
   .calbtn,.rail,.actions{display:none}
   .daygroup{opacity:1;transform:none;animation:none}
 }

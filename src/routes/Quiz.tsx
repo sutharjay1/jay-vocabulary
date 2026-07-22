@@ -1,32 +1,31 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import {
-  PART_A,
-  PART_B,
-  PART_C,
-  PART_D,
-  BLANK_BANK,
-  MATCH_MEANINGS,
-  TOTAL_SCORED,
-  TOTAL_QUESTIONS,
-} from "../data";
+import { Link, Navigate, useParams } from "react-router-dom";
+import { getSet, scoredIn, questionsIn } from "../sets";
 
 const KEYS = ["A", "B", "C", "D"];
 
 export default function Quiz() {
+  const { set: slug } = useParams();
+  const set = getSet(slug);
+
   const [choice, setChoice] = useState<Record<number, number>>({});
   const [blank, setBlank] = useState<Record<number, string>>({});
   const [match, setMatch] = useState<Record<number, string>>({});
   const [revealed, setRevealed] = useState<Record<number, boolean>>({});
   const [checked, setChecked] = useState(false);
 
+  if (!set) return <Navigate to="/" replace />;
+
+  const { partA, partB, partC, partD, bank, meanings } = set.quiz;
+  const scored = scoredIn(set);
+
   const answered =
     Object.keys(choice).length + Object.keys(blank).length + Object.keys(match).length;
 
   const score =
-    PART_A.filter((q) => choice[q.n] === q.answer).length +
-    PART_B.filter((q) => blank[q.n] === q.answer).length +
-    PART_C.filter((q) => match[q.n] === q.answer).length;
+    partA.filter((q) => choice[q.n] === q.answer).length +
+    partB.filter((q) => blank[q.n] === q.answer).length +
+    partC.filter((q) => match[q.n] === q.answer).length;
 
   function reset() {
     setChoice({});
@@ -37,25 +36,25 @@ export default function Quiz() {
 
   return (
     <>
-      <p className="eyebrow">Check yourself</p>
+      <p className="eyebrow">{set.title} · check yourself</p>
       <h1>Quiz</h1>
       <p className="lede">
-        Seven questions across four parts. Parts A, B and C are scored — {TOTAL_SCORED} answers in
-        all. Part D is open: write your own, then compare it against a model answer.
+        {questionsIn(set)} questions across four parts. Parts A, B and C are scored — {scored}{" "}
+        answers in all. Part D is open: write your own, then compare it against a model answer.
       </p>
 
       <div className="tl-controls">
-        <span className="rng">{TOTAL_QUESTIONS} questions</span>
+        <span className="rng">{questionsIn(set)} questions</span>
         <span className="sep">·</span>
-        <Link to="/words">All five words</Link>
+        <Link to={`/${set.slug}/words`}>All {set.words.length} words</Link>
         <span className="sep">·</span>
-        <Link to="/">Overview</Link>
+        <Link to={`/${set.slug}`}>{set.title}</Link>
       </div>
 
       {/* ---------- Part A ---------- */}
       <div className="block" style={{ marginTop: 8 }}>
         <h2 className="section">Part A · Multiple choice</h2>
-        {PART_A.map((q) => {
+        {partA.map((q) => {
           const picked = choice[q.n];
           const right = picked === q.answer;
           return (
@@ -99,9 +98,9 @@ export default function Quiz() {
       <div className="block">
         <h2 className="section">Part B · Fill in the blank</h2>
         <p className="bank">
-          Choose from: <strong>{BLANK_BANK.join(", ")}</strong>
+          Choose from: <strong>{bank.join(", ")}</strong>
         </p>
-        {PART_B.map((q) => {
+        {partB.map((q) => {
           const val = blank[q.n] ?? "";
           const right = val === q.answer;
           return (
@@ -119,7 +118,7 @@ export default function Quiz() {
                     onChange={(e) => setBlank((s) => ({ ...s, [q.n]: e.target.value }))}
                   >
                     <option value="">__________</option>
-                    {BLANK_BANK.map((b) => (
+                    {bank.map((b) => (
                       <option key={b} value={b}>
                         {b}
                       </option>
@@ -149,7 +148,7 @@ export default function Quiz() {
         <p className="bank">Match each item to its meaning.</p>
         <div className="q matchgroup">
           <div className="mrows">
-            {PART_C.map((q) => {
+            {partC.map((q) => {
               const val = match[q.n] ?? "";
               return (
                 <div className="mrow" key={q.n}>
@@ -164,7 +163,7 @@ export default function Quiz() {
                     onChange={(e) => setMatch((s) => ({ ...s, [q.n]: e.target.value }))}
                   >
                     <option value="">Choose a meaning</option>
-                    {MATCH_MEANINGS.map((m) => (
+                    {meanings.map((m) => (
                       <option key={m} value={m}>
                         {m}
                       </option>
@@ -176,13 +175,12 @@ export default function Quiz() {
           </div>
           <div className={"verdict" + (checked ? " on" : "")} style={{ marginLeft: 0 }} role="status">
             {checked &&
-              (PART_C.every((q) => match[q.n] === q.answer) ? (
-                <b>All three correct.</b>
+              (partC.every((q) => match[q.n] === q.answer) ? (
+                <b>All {partC.length} correct.</b>
               ) : (
                 <>
-                  {PART_C.filter((q) => match[q.n] === q.answer).length} of {PART_C.length} correct
-                  —{" "}
-                  {PART_C.map((q, k) => (
+                  {partC.filter((q) => match[q.n] === q.answer).length} of {partC.length} correct —{" "}
+                  {partC.map((q, k) => (
                     <span key={q.n}>
                       {k > 0 && "; "}
                       {q.item} is <b>{q.answer.toLowerCase()}</b>
@@ -208,10 +206,10 @@ export default function Quiz() {
           {checked && (
             <>
               <b>
-                {score} of {TOTAL_SCORED}
+                {score} of {scored}
               </b>{" "}
               correct
-              {answered < TOTAL_SCORED && checked ? " · some left blank" : ""}
+              {answered < scored ? " · some left blank" : ""}
             </>
           )}
         </span>
@@ -220,18 +218,16 @@ export default function Quiz() {
       {/* ---------- Part D ---------- */}
       <div className="block">
         <h2 className="section">Part D · Context</h2>
-        {PART_D.map((q) => (
+        {partD.map((q) => (
           <div className="q" key={q.n}>
             <div className="qhead">
               <span className="qnum">{q.n}.</span>
               <span className="qprompt">{q.prompt}</span>
             </div>
             {q.lines && (
-              <ul style={{ margin: "10px 0 0 28px", padding: 0, listStyle: "none" }}>
+              <ul className="qlines">
                 {q.lines.map((l) => (
-                  <li key={l} style={{ padding: "3px 0" }}>
-                    {l}
-                  </li>
+                  <li key={l}>{l}</li>
                 ))}
               </ul>
             )}
@@ -254,15 +250,15 @@ export default function Quiz() {
       </div>
 
       <p className="cta">
-        <Link to="/words">
+        <Link to={`/${set.slug}/words`}>
           Back to the words <span className="arw">→</span>
         </Link>
       </p>
 
       <p className="note">
         Every question, option and answer key is taken from{" "}
-        <span className="mono">Vocabulary_doc_1.docx</span>. The model answers in part D are written
-        for this site; the document leaves those open.
+        <span className="mono">{set.file}</span>. The model answers in part D are written for this
+        site; the document leaves those open.
       </p>
     </>
   );

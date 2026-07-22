@@ -1,23 +1,28 @@
 import { useEffect } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Rail, TopBar } from "./components/Chrome";
-import Overview from "./routes/Overview";
+import { getSet } from "./sets";
+import Library from "./routes/Library";
+import SetOverview from "./routes/SetOverview";
 import Words from "./routes/Words";
 import Quiz from "./routes/Quiz";
 
-const TITLES: Record<string, string> = {
-  "/": "Vocabulary — five words and how to use them",
-  "/words": "The words · Vocabulary",
-  "/quiz": "Quiz · Vocabulary",
-};
-
-/* Client-side navigation keeps the scroll position of the previous route;
-   restore the top on every route change so pages start where they should. */
-function ScrollToTop() {
+/* Client-side navigation keeps the previous route's scroll position; restore
+   the top on every change, and keep the document title in step. */
+function Head() {
   const { pathname, search } = useLocation();
   useEffect(() => {
     window.scrollTo(0, 0);
-    document.title = TITLES[pathname] ?? "Vocabulary";
+
+    const [, slug, leaf] = pathname.split("/");
+    const set = getSet(slug);
+    document.title = !set
+      ? "Vocabulary — every set"
+      : leaf === "quiz"
+        ? `Quiz · ${set.title}`
+        : leaf === "words"
+          ? `The words · ${set.title}`
+          : `${set.title} — ${set.theme}`;
   }, [pathname, search]);
   return null;
 }
@@ -25,14 +30,15 @@ function ScrollToTop() {
 export default function App() {
   return (
     <>
-      <ScrollToTop />
+      <Head />
       <main className="container">
         <TopBar />
         <Rail />
         <Routes>
-          <Route path="/" element={<Overview />} />
-          <Route path="/words" element={<Words />} />
-          <Route path="/quiz" element={<Quiz />} />
+          <Route path="/" element={<Library />} />
+          <Route path="/:set" element={<SetOverview />} />
+          <Route path="/:set/words" element={<Words />} />
+          <Route path="/:set/quiz" element={<Quiz />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
