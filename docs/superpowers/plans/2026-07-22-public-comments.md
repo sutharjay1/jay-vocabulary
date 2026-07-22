@@ -2067,5 +2067,7 @@ Called out so nobody assumes otherwise:
 - **No threading.** Notes are a flat list per target; there are no replies.
 - **No pagination.** The Worker caps at 200 rows. Past that, add a cursor on `created_at`.
 - **No spam filtering beyond the rate limit.** A determined poster with rotating IPs gets through. Acceptable for two known users; revisit if the URL spreads.
+- **The rate limit is not race-proof.** The count and the insert are separate statements, so simultaneous requests from one IP can each read the same stale count and all pass. A burst can exceed 5. Closing it needs an atomic `INSERT ... SELECT ... WHERE (SELECT COUNT(*) ...) < ?` or a Durable Object per IP.
+- **Deleting a comment refunds its author's rate-limit allowance**, because the window counts live rows. Moderating spam un-throttles the spammer instead of extending the block.
 - **No live updates.** Another person's note appears on your next load, not in real time.
 - **The name is unverified.** Anyone can type `Jay`. There is no auth, by choice.
