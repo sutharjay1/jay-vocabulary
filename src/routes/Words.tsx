@@ -1,5 +1,6 @@
 import { Link, Navigate, useParams, useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import CommentThread from "../components/CommentThread";
 import { getSet, type VocabSet } from "../sets";
 import { block, controlLink, controls, ctaArrow, ctaLink, idx, lede, section, title } from "../ui";
 
@@ -53,6 +54,8 @@ export default function Words() {
         <h2 className={section}>Note</h2>
         <p className="mt-2.5 leading-[1.7] text-muted-foreground text-pretty">{word.note}</p>
       </div>
+
+      <CommentThread set={set.slug} word={word.slug} />
 
       <div className="mt-12 flex items-center justify-between gap-4 border-t border-border pt-5 text-[15px]">
         {prev ? (
