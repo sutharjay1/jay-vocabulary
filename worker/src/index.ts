@@ -55,6 +55,9 @@ export default {
 
     const del = url.pathname.match(/^\/api\/comments\/([A-Za-z0-9-]+)$/);
     if (del && request.method === "DELETE") {
+      if (!env.ADMIN_TOKEN) {
+        return json({ error: "Server misconfigured." }, 500);
+      }
       if (request.headers.get("x-admin-token") !== env.ADMIN_TOKEN) {
         return json({ error: "Unauthorized." }, 401);
       }

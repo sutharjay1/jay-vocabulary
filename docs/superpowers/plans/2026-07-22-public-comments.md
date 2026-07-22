@@ -1017,7 +1017,44 @@ describe("DELETE /api/comments/:id", () => {
     });
     expect(response.status).toBe(404);
   });
+
+  it("answers 401, not 404, for a nonexistent id with no token", async () => {
+    // Pins the ordering: the token is checked before the row is looked up, so
+    // an unauthenticated caller cannot tell a real id from an invented one.
+    const response = await call("/api/comments/definitely-not-a-real-id", { method: "DELETE" });
+    expect(response.status).toBe(401);
+  });
 });
+```
+
+Also add this into the existing `describe("configuration", ...)` block from Task 2, next
+to the `IP_SALT` test it mirrors:
+
+```ts
+  it("refuses to delete when ADMIN_TOKEN is empty, rather than accepting an empty header", async () => {
+    const created = await post({
+      setSlug: "vocabulary-1",
+      wordSlug: null,
+      author: "Jay",
+      body: "must survive",
+    });
+    const { comment } = (await created.json()) as any;
+
+    const original = env.ADMIN_TOKEN;
+    env.ADMIN_TOKEN = "";
+    try {
+      const response = await call(`/api/comments/${comment.id}`, {
+        method: "DELETE",
+        headers: { "x-admin-token": "" },
+      });
+      expect(response.status).toBe(500);
+
+      const { comments } = (await (await call("/api/comments")).json()) as any;
+      expect(comments).toHaveLength(1);
+    } finally {
+      env.ADMIN_TOKEN = original;
+    }
+  });
 ```
 
 - [ ] **Step 2: Run to verify they fail**
@@ -1026,7 +1063,8 @@ describe("DELETE /api/comments/:id", () => {
 cd worker && pnpm test
 ```
 
-Expected: FAIL — DELETE returns 404 from the fallthrough for every case, so the 401 tests fail.
+Expected: FAIL — DELETE returns 404 from the fallthrough for every case, so the 401 tests fail, and the
+`ADMIN_TOKEN`-empty test fails too (200, not 500) since the guard doesn't exist yet.
 
 - [ ] **Step 3: Add `deleteComment` to `worker/src/db.ts`**
 
@@ -1050,6 +1088,9 @@ Add this branch before the final `return new Response("Not found", { status: 404
 ```ts
     const del = url.pathname.match(/^\/api\/comments\/([A-Za-z0-9-]+)$/);
     if (del && request.method === "DELETE") {
+      if (!env.ADMIN_TOKEN) {
+        return json({ error: "Server misconfigured." }, 500);
+      }
       if (request.headers.get("x-admin-token") !== env.ADMIN_TOKEN) {
         return json({ error: "Unauthorized." }, 401);
       }
@@ -1059,6 +1100,10 @@ Add this branch before the final `return new Response("Not found", { status: 404
 ```
 
 The token is compared before the lookup, so an unauthenticated caller cannot probe which ids exist.
+`Headers.get()` returns `""` for a header sent with an empty value, not `null` — so without the
+`!env.ADMIN_TOKEN` guard, an empty `ADMIN_TOKEN` binding paired with an empty `x-admin-token` header
+would satisfy `"" !== ""` as `false` and slip past the comparison, making delete unauthenticated; the
+guard above is required for that reason, not merely as defensive padding.
 
 - [ ] **Step 5: Run the tests**
 
@@ -1066,7 +1111,7 @@ The token is compared before the lookup, so an unauthenticated caller cannot pro
 cd worker && pnpm test
 ```
 
-Expected: PASS, 19 tests.
+Expected: PASS, 21 tests.
 
 - [ ] **Step 6: Set the admin token secret**
 
@@ -1207,7 +1252,7 @@ async function route(request: Request, env: Env): Promise<Response> {
 cd worker && pnpm test
 ```
 
-Expected: PASS, 22 tests.
+Expected: PASS, 24 tests.
 
 - [ ] **Step 6: Initialise the remote database**
 

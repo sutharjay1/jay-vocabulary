@@ -265,6 +265,13 @@ describe("DELETE /api/comments/:id", () => {
     });
     expect(response.status).toBe(404);
   });
+
+  it("answers 401, not 404, for a nonexistent id with no token", async () => {
+    // Pins the ordering: the token is checked before the row is looked up, so
+    // an unauthenticated caller cannot tell a real id from an invented one.
+    const response = await call("/api/comments/definitely-not-a-real-id", { method: "DELETE" });
+    expect(response.status).toBe(401);
+  });
 });
 
 describe("configuration", () => {
@@ -286,6 +293,31 @@ describe("configuration", () => {
       expect(comments).toHaveLength(0);
     } finally {
       env.IP_SALT = original;
+    }
+  });
+
+  it("refuses to delete when ADMIN_TOKEN is empty, rather than accepting an empty header", async () => {
+    const created = await post({
+      setSlug: "vocabulary-1",
+      wordSlug: null,
+      author: "Jay",
+      body: "must survive",
+    });
+    const { comment } = (await created.json()) as any;
+
+    const original = env.ADMIN_TOKEN;
+    env.ADMIN_TOKEN = "";
+    try {
+      const response = await call(`/api/comments/${comment.id}`, {
+        method: "DELETE",
+        headers: { "x-admin-token": "" },
+      });
+      expect(response.status).toBe(500);
+
+      const { comments } = (await (await call("/api/comments")).json()) as any;
+      expect(comments).toHaveLength(1);
+    } finally {
+      env.ADMIN_TOKEN = original;
     }
   });
 });
