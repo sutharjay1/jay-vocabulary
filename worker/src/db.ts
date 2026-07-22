@@ -49,7 +49,9 @@ export async function listComments(
     binds.push(filter.setSlug);
   }
 
-  sql += ` ORDER BY created_at DESC LIMIT 200`;
+  // id is a random UUID, not a sequence — this tiebreaker only makes ties
+  // stable between identical queries, it does not mean "newest first" among them.
+  sql += ` ORDER BY created_at DESC, id DESC LIMIT 200`;
   const { results } = await db.prepare(sql).bind(...binds).all<Comment>();
   return results ?? [];
 }

@@ -624,7 +624,9 @@ export async function listComments(
     binds.push(filter.setSlug);
   }
 
-  sql += ` ORDER BY created_at DESC LIMIT 200`;
+  // id is a random UUID, not a sequence — this tiebreaker only makes ties
+  // stable between identical queries, it does not mean "newest first" among them.
+  sql += ` ORDER BY created_at DESC, id DESC LIMIT 200`;
   const { results } = await db.prepare(sql).bind(...binds).all<Comment>();
   return results ?? [];
 }
@@ -742,11 +744,12 @@ describe("filtering", () => {
     await post({ setSlug: "vocabulary-1", wordSlug: "navigate", author: "Jay", body: "two" });
     await post({ setSlug: "vocabulary-1", wordSlug: null, author: "Jay", body: "set level" });
     await post({ setSlug: "vocabulary-2", wordSlug: "abate", author: "Tutor", body: "other set" });
+    await post({ setSlug: "vocabulary-10", wordSlug: "decade", author: "Jay", body: "prefix trap" });
   });
 
   it("returns everything when unfiltered", async () => {
     const { comments } = (await (await call("/api/comments")).json()) as any;
-    expect(comments).toHaveLength(4);
+    expect(comments).toHaveLength(5);
   });
 
   it("filters to one set, including its set-level comments", async () => {
@@ -755,6 +758,7 @@ describe("filtering", () => {
     ).json()) as any;
     expect(comments).toHaveLength(3);
     expect(comments.every((c: any) => c.set_slug === "vocabulary-1")).toBe(true);
+    expect(comments.some((c: any) => c.set_slug === "vocabulary-10")).toBe(false);
   });
 
   it("filters to one word", async () => {
@@ -766,9 +770,26 @@ describe("filtering", () => {
   });
 
   it("returns newest first", async () => {
+    // Date.now() is coarsened in workerd, so seeded rows can share a timestamp
+    // and a uniform array would sort to itself — proving nothing. Stamp
+    // distinct times directly so this test can only pass on a real DESC sort.
+    const rows = await env.DB.prepare("SELECT id FROM comments ORDER BY rowid").all<{ id: string }>();
+    const ids = (rows.results ?? []).map((r) => r.id);
+    expect(ids.length).toBeGreaterThan(2);
+
+    const base = 1_000_000_000_000;
+    for (let i = 0; i < ids.length; i++) {
+      await env.DB.prepare("UPDATE comments SET created_at = ? WHERE id = ?")
+        .bind(base + i * 1000, ids[i])
+        .run();
+    }
+
     const { comments } = (await (await call("/api/comments")).json()) as any;
     const times = comments.map((c: any) => c.created_at);
-    expect([...times].sort((a, b) => b - a)).toEqual(times);
+    expect(times).toHaveLength(ids.length);
+    expect(times).toEqual([...times].sort((a: number, b: number) => b - a));
+    // The last row stamped is the newest, so it must come first.
+    expect(comments[0].created_at).toBe(base + (ids.length - 1) * 1000);
   });
 
   it("returns an empty list for an unknown set rather than erroring", async () => {
@@ -785,9 +806,7 @@ describe("filtering", () => {
 cd worker && pnpm test
 ```
 
-Expected: PASS, 13 tests. `listComments` already implements this; these tests exist to stop a later refactor from silently breaking the set/word split.
-
-If "returns newest first" is flaky because several inserts land in the same millisecond, change the shared `insertComment` ordering guarantee by making the ORDER BY `created_at DESC, id DESC` in `worker/src/db.ts`, then re-run.
+Expected: PASS. `listComments` already implements this; these tests exist to stop a later refactor from silently breaking the set/word split.
 
 - [ ] **Step 3: Commit**
 
