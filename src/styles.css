@@ -169,6 +169,13 @@
     text-rendering: optimizeLegibility;
     @apply font-sans;
   }
+  /* Chapter links glide to their target; for anyone who has asked for less
+     movement they jump instead. */
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
   * {
     @apply border-border outline-ring/50;
   }

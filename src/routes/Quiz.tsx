@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { getSet, scoredIn } from "../sets";
+import { getSet, isVocab, scoredIn } from "../sets";
 import { block, controlLink, controls, ctaArrow, ctaLink, mono, note, section, title } from "../ui";
 
 const KEYS = ["A", "B", "C", "D"];
@@ -47,7 +47,7 @@ export default function Quiz() {
   const [revealed, setRevealed] = useState<Record<number, boolean>>({});
   const [checked, setChecked] = useState(false);
 
-  if (!set) return <Navigate to="/" replace />;
+  if (!set || !isVocab(set)) return <Navigate to="/" replace />;
 
   const { partA, partB, partC, partD, bank, meanings } = set.quiz;
   const scored = scoredIn(set);

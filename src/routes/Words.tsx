@@ -1,7 +1,7 @@
 import { Link, Navigate, useParams, useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import CommentThread from "../components/CommentThread";
-import { getSet, type VocabSet } from "../sets";
+import { getSet, isVocab, type VocabSet } from "../sets";
 import { block, controlLink, controls, ctaArrow, ctaLink, idx, lede, section, title } from "../ui";
 
 const syns =
@@ -12,7 +12,7 @@ export default function Words() {
   const set = getSet(slug);
   const [params] = useSearchParams();
 
-  if (!set) return <Navigate to="/" replace />;
+  if (!set || !isVocab(set)) return <Navigate to="/" replace />;
 
   const i = set.words.findIndex((w) => w.slug === params.get("w"));
   if (i < 0) return <AllWords set={set} />;

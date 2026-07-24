@@ -65,6 +65,33 @@ export const IconArrow = (p: P) => (
   </svg>
 );
 
+/* The verdict marks. They render at roughly half the size of a rail icon, so
+   they carry their own heavier stroke — 1.7 goes wispy at 12px. */
+const glyph = { ...base, strokeWidth: 2.3 };
+
+export const IconCheck = (p: P) => (
+  <svg {...glyph} {...p}>
+    <path d="m5 12.5 5 5L19 7" />
+  </svg>
+);
+
+export const IconCross = (p: P) => (
+  <svg {...glyph} {...p}>
+    <path d="M6.5 6.5 17.5 17.5" />
+    <path d="M17.5 6.5 6.5 17.5" />
+  </svg>
+);
+
+/* A bound guide — the mark for a grammar guide's rule pages. Distinct from
+   IconDoc, which is a loose page with a folded corner. */
+export const IconRules = (p: P) => (
+  <svg {...base} {...p}>
+    <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H19.5v16H5.5A1.5 1.5 0 0 1 4 18.5z" />
+    <path d="M8 8.5h7" />
+    <path d="M8 12h5" />
+  </svg>
+);
+
 /* Speech bubble — the mark for the comment listings. */
 export const IconComment = (p: P) => (
   <svg {...base} {...p}>

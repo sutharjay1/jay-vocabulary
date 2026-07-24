@@ -5,9 +5,11 @@
 import type { VocabSet } from "./types";
 
 const set: VocabSet = {
+  kind: "vocab",
   slug: "vocabulary-1",
   n: 1,
   title: "Vocabulary 1",
+  short: "Set 1",
   file: "Vocabulary_doc_1.docx",
   theme: "Professional English",
   added: "2026-07-22",

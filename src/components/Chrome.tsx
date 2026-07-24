@@ -1,8 +1,16 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { COMMENTS_ENABLED } from "../comments/api";
-import { SETS, getSet } from "../sets";
-import { IconComment, IconDoc, IconLibrary, IconList, IconMenu, IconQuiz } from "./icons";
+import { SETS, getSet, isVocab } from "../sets";
+import {
+  IconComment,
+  IconDoc,
+  IconLibrary,
+  IconList,
+  IconMenu,
+  IconQuiz,
+  IconRules,
+} from "./icons";
 
 type Item = { href: string; label: string; mark: ReactNode; sep?: boolean };
 
@@ -42,22 +50,45 @@ function useItems(): Item[] {
     ];
   }
 
-  const items: Item[] = set.words.map((w) => ({
-    href: `/${set.slug}/words?w=${w.slug}`,
-    label: w.term,
-    mark: <span className="text-[11.5px] font-semibold leading-none tabular-nums">{w.n}</span>,
-  }));
-  items.push({
-    href: `/${set.slug}/words`,
-    label: "All five",
-    mark: <IconList className="block h-3.5 w-3.5" />,
-    sep: true,
-  });
-  items.push({
-    href: `/${set.slug}/quiz`,
-    label: "Quiz",
-    mark: <IconQuiz className="block h-3.5 w-3.5" />,
-  });
+  /* Both kinds open with their own numbered entries, then the same tail: read
+     it all, test yourself, comments, back to the library. */
+  const items: Item[] = isVocab(set)
+    ? set.words.map((w) => ({
+        href: `/${set.slug}/words?w=${w.slug}`,
+        label: w.term,
+        mark: <Numeral n={w.n} />,
+      }))
+    : set.chapters.map((c) => ({
+        href: `/${set.slug}/rules#${c.slug}`,
+        label: c.short,
+        mark: <Numeral n={c.n} />,
+      }));
+
+  if (isVocab(set)) {
+    items.push({
+      href: `/${set.slug}/words`,
+      label: `All ${set.words.length}`,
+      mark: <IconList className="block h-3.5 w-3.5" />,
+      sep: true,
+    });
+    items.push({
+      href: `/${set.slug}/quiz`,
+      label: "Quiz",
+      mark: <IconQuiz className="block h-3.5 w-3.5" />,
+    });
+  } else {
+    items.push({
+      href: `/${set.slug}/rules`,
+      label: "All the rules",
+      mark: <IconRules className="block h-3.5 w-3.5" />,
+      sep: true,
+    });
+    items.push({
+      href: `/${set.slug}/practice`,
+      label: "Practice",
+      mark: <IconQuiz className="block h-3.5 w-3.5" />,
+    });
+  }
   if (COMMENTS_ENABLED) {
     items.push({
       href: `/${set.slug}/comments`,
@@ -74,18 +105,24 @@ function useItems(): Item[] {
   return items;
 }
 
+/* An entry is current when its href matches the location, so the two entries
+   that carry more than a path — a word in the query, a chapter in the hash —
+   have to rebuild theirs. Everything else is the pathname as it stands. */
 function useCurrent() {
-  const { pathname } = useLocation();
+  const { pathname, hash } = useLocation();
   const [params] = useSearchParams();
   const set = useSet();
-  const w = params.get("w");
   if (!set) return pathname === "/" ? "" : pathname;
-  if (pathname === `/${set.slug}/comments`) return `/${set.slug}/comments`;
-  if (pathname === `/${set.slug}/quiz`) return `/${set.slug}/quiz`;
-  if (pathname === `/${set.slug}/words`)
-    return w ? `/${set.slug}/words?w=${w}` : `/${set.slug}/words`;
+  const w = params.get("w");
+  if (pathname === `/${set.slug}/words`) return w ? `${pathname}?w=${w}` : pathname;
+  if (pathname === `/${set.slug}/rules`) return hash ? `${pathname}${hash}` : pathname;
+  if (pathname.startsWith(`/${set.slug}/`)) return pathname;
   return `/${set.slug}`;
 }
+
+const Numeral = ({ n }: { n: number }) => (
+  <span className="text-[11.5px] font-semibold leading-none tabular-nums">{n}</span>
+);
 
 /* The mark inherits the link's colour, so both move together on hover. */
 const markSlot = "flex h-4 w-4 flex-none items-center justify-center";
@@ -186,7 +223,7 @@ export function TopBar() {
       >
         Vocabulary
         <span className="text-[13px] font-medium tracking-[0.02em] text-muted-foreground">
-          {set ? set.title.replace(/^Vocabulary /, "Set ") : "Library"}
+          {set ? set.short : "Library"}
         </span>
       </Link>
 
@@ -195,7 +232,9 @@ export function TopBar() {
           ref={btnRef}
           className="relative -my-1.5 -mr-2 inline-flex h-[34px] w-[34px] items-center justify-center rounded-[9px] text-muted-foreground transition-[color,background-color,transform] duration-150 ease-out-quint after:absolute after:-inset-1.5 after:content-[''] hover:bg-foreground/5 hover:text-foreground active:scale-[0.97] motion-reduce:active:scale-100 print:hidden"
           type="button"
-          aria-label={set ? "Jump to a word" : "Jump to a set"}
+          aria-label={
+            !set ? "Jump to a document" : isVocab(set) ? "Jump to a word" : "Jump to a chapter"
+          }
           aria-haspopup="menu"
           aria-expanded={open}
           onClick={(e) => {

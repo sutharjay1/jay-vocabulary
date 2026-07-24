@@ -1,17 +1,15 @@
 import { Link, Navigate, useParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { getSet, examplesIn, synonymsIn, questionsIn, scoredIn } from "../sets";
+import { getSet, examplesIn, isGrammar, synonymsIn, questionsIn, scoredIn } from "../sets";
 import CommentThread from "../components/CommentThread";
+import DocMeta from "../components/DocMeta";
 import Prose from "../components/Prose";
+import GuideOverview from "./GuideOverview";
 import {
   block,
   ctaArrow,
   ctaLink,
   idx,
-  metaName,
-  metaRow,
-  metaVal,
-  mono,
   rowMeta,
   rowName,
   row,
@@ -23,39 +21,19 @@ import {
   tldr,
 } from "../ui";
 
+/* One URL segment, two kinds of document behind it. The slug resolves here and
+   `kind` decides which overview it gets. */
 export default function SetOverview() {
   const { set: slug } = useParams();
   const set = getSet(slug);
   if (!set) return <Navigate to="/" replace />;
+  if (isGrammar(set)) return <GuideOverview guide={set} />;
 
   return (
     <>
       <h1 className={cn("mt-12", title)}>{set.title}</h1>
 
-      <div className="mt-8 border-t border-border">
-        <div className={metaRow}>
-          <span className={metaName}>Reference file</span>
-          <span className="flex-1" />
-          <span className={cn(metaVal, mono)}>{set.file}</span>
-        </div>
-        <div className={metaRow}>
-          <span className={metaName}>Contents</span>
-          <span className="flex-1" />
-          <span className={metaVal}>
-            {set.words.length} words · {questionsIn(set)} quiz questions
-          </span>
-        </div>
-        <div className={metaRow}>
-          <span className={metaName}>Theme</span>
-          <span className="flex-1" />
-          <span className={metaVal}>{set.theme}</span>
-        </div>
-        <div className={metaRow}>
-          <span className={metaName}>Added</span>
-          <span className="flex-1" />
-          <span className={metaVal}>{set.addedLabel}</span>
-        </div>
-      </div>
+      <DocMeta doc={set} />
 
       <div className={stats}>
         <div>
